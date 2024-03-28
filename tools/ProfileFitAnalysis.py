@@ -17,7 +17,6 @@ import random
 import numpy as np
 
 from .ASCIIFileReader import Event
-from . import FisherTools
 from .PlottingTools import qualitative_colors
 
 
@@ -193,10 +192,8 @@ class MultivariateMassAnalysis(object):
             raise ValueError("'singleObservable' keyword is set but the more than one observable was passed to the observables list.")
 
         self.data = {}
-        self.fisherBlocks = {}
         for key in self.primaryNames.keys():
             self.data[self.primaryNames[key]] = [[] for i in range(len(self.params))]
-            self.fisherBlocks[self.primaryNames[key]] = FisherTools.FisherBlock(len(self.params))
 
         self.sigmas = [0.9, 0.68]  # Contour line definitions (solely used for contour plots)
 
@@ -668,7 +665,6 @@ class MultivariateMassAnalysis(object):
             for ival, val in enumerate(vals):
                 self.data[name][ival].append(val)
 
-            self.fisherBlocks[name].AddSample(vals)
 
             prevZen = zen
             prevAzi = azi
@@ -836,686 +832,157 @@ class MultivariateMassAnalysis(object):
         return xBins, yBins, counts, countsNorm, t_contours
 
 
-    def GetFisherProjections(self, ipar, jpar, normalize=True, singleVariable=False, allParams=False):
+    def MakeContourPlots(self, filename):
 
-        projectionFisherBlocks = {}
+        fileSplit = filename.rsplit("/", 1)
+        fileNameString = fileSplit[-1].rsplit(".", 1)
 
-        if singleVariable == True and allParams == False:
-            for key in self.primaryNames.keys():
-                prim = self.primaryNames[key]
-                projectionFisherBlocks[prim] = FisherTools.FisherBlock(1)
+        dumpFig = plt.figure()
+        dumpAx = dumpFig.add_subplot(1, 1, 1)
 
-                for ientry in range(len(self.fisherBlocks[prim].data)):
-                    val = self.fisherBlocks[prim].data[ientry][ipar]
+        nRows = 1
+        nCols = 1
 
-                    vals = [val]
+        gs = gridspec.GridSpec(nRows, nCols, wspace=0.3, hspace=0.3)
 
-                    projectionFisherBlocks[prim].AddSample(vals)
-        elif singleVariable == False and allParams == True:
-            blockSize = len(self.params)
-            for key in self.primaryNames.keys():
-                prim = self.primaryNames[key]
-                projectionFisherBlocks[prim] = FisherTools.FisherBlock(blockSize)
+        for ipar in range(len(self.params)):
+            for jpar in range(ipar + 1, len(self.params)):
 
-                for ientry in range(len(self.fisherBlocks[prim].data)):
-                    vals = []
-                    for param in range(len(self.params)):
-                        ival = self.fisherBlocks[prim].data[ientry][param]
-                        vals.append(ival)
+                fig = plt.figure(figsize=(nCols * 18.0 / 2.54, nRows * 15.0 / 2.54))
+                ax = fig.add_subplot(gs[0])
+                ax.set_xlabel(self.params[ipar])
+                ax.set_ylabel(self.params[jpar])
 
-                    projectionFisherBlocks[prim].AddSample(vals)
-        else:
-            for key in self.primaryNames.keys():
-                prim = self.primaryNames[key]
-                projectionFisherBlocks[prim] = FisherTools.FisherBlock(2)
+                print("Comparing", self.params[ipar], "and", self.params[jpar])
 
-                for ientry in range(len(self.fisherBlocks[prim].data)):
-                    val1 = self.fisherBlocks[prim].data[ientry][ipar]
-                    val2 = self.fisherBlocks[prim].data[ientry][jpar]
+                minX = 1e100
+                maxX = -1e100
+                minY = 1e100
+                maxY = -1e100
 
-                    vals = [val1, val2]
+                nBins = 10
 
-                    projectionFisherBlocks[prim].AddSample(vals)
-
-
-        for iprim, prim1 in enumerate(projectionFisherBlocks.keys()):
-            if not len(projectionFisherBlocks[prim1].data):
-                continue
-            for jprim, prim2 in enumerate(projectionFisherBlocks.keys()):
-                if jprim <= iprim:
-                    continue
-                if not len(projectionFisherBlocks[prim2].data):
-                    continue
-
-                w = FisherTools.CalcFisher(projectionFisherBlocks[prim1], projectionFisherBlocks[prim2])
-
-                projectedA = projectionFisherBlocks[prim1].GetProjected(w)
-                projectedB = projectionFisherBlocks[prim2].GetProjected(w)
-
-                if normalize == True:
-                    mean = np.mean(np.concatenate([projectedA, projectedB]))
-                    spread = np.nanstd(np.concatenate([projectedA, projectedB]))
-
-                    for i, val in enumerate(projectedA):
-                        newVal = (val - mean) / spread
-                        projectedA[i] = newVal
-
-                    for i, val in enumerate(projectedB):
-                        newVal = (val - mean) / spread
-                        projectedB[i] = newVal
-
-                # Now return the normalized datasets so histograms can be plotted
-                return [projectedA, projectedB]
-
-
-    def MakeContourPlots(self, filename, fisherProjections=False, individualPlots=False):
-
-        if individualPlots == False:
-
-            dumpFig = plt.figure()
-            dumpAx = dumpFig.add_subplot(1, 1, 1)
-
-            nPlots = int((len(self.params) ** 2 - len(self.params)) / 2.0)
-
-            if fisherProjections == False:
-                nRows = 1
-            else:
-                nRows = 3
-
-            nCols = nPlots
-            gs = gridspec.GridSpec(nRows, nCols, wspace=0.3, hspace=0.3)
-            fig = plt.figure(figsize=(nCols * 18.0 / 2.54, nRows * 15.0 / 2.54))
-
-            igs = 0
-            for ipar in range(len(self.params)):
-                for jpar in range(ipar + 1, len(self.params)):
-
-                    if fisherProjections == False:
-                        ax = fig.add_subplot(gs[igs])
-                        igs += 1
-                        ax.set_xlabel(self.params[ipar])
-                        ax.set_ylabel(self.params[jpar])
-                    else:
-                        ax = fig.add_subplot(gs[0, igs])
-                        ax2 = fig.add_subplot(gs[1, igs])
-                        igs += 1
-                        ax.set_xlabel(self.params[ipar])
-                        ax.set_ylabel(self.params[jpar])
-                        ax2.set_xlabel(f'Proj. ({self.params[ipar]}, {self.params[jpar]})')
-                        ax2.set_ylabel('Counts')
-
-                        # If I want all parameters in the projection plot then change allParams=True, also need to change ax2.set_xlabel()
-                        projections = self.GetFisherProjections(ipar, jpar, normalize=True, singleVariable=False, allParams=False)
-
-                        minBin = min([min(val) for val in projections])
-                        maxBin = max([max(val) for val in projections])
-                        nBins = int(np.sqrt(len(projections[0])))
-
-                        vlineMax = 0
-                        means = []
-
-                        for iprim, prim in enumerate(self.data.keys()):
-
-                            yPrim, xPrim, junk = ax2.hist(projections[iprim], bins=np.linspace(minBin, maxBin, nBins),
-                                                          histtype='step', linewidth=2, color=self.primaryColors[iprim], label=prim)
-
-                            avgPrim = np.average(projections[iprim])
-                            stdevPrim = np.std(projections[iprim])
-
-                            means.append(avgPrim)
-
-                            ax2.vlines([avgPrim + stdevPrim, avgPrim - stdevPrim], 0, np.max(yPrim) + 10,
-                                       colors=self.primaryColors[iprim], linestyles='dashed', label=r'1$\sigma$ Bands')
-
-                            if np.max(yPrim) > vlineMax:
-                                vlineMax = np.max(yPrim)
-
-                        ax2.vlines(means, 0, vlineMax + 10, colors='black', linestyles='dashed', label='Average')
-
-                        if minBin < -3.:
-                            ax2.legend(loc="upper left", prop={"size": 14})
-                        else:
-                            ax2.legend(loc="upper right", prop={"size": 14})
-
-                        ax2.tick_params(direction="in", which="both", axis="both")
-                        ax2.yaxis.set_ticks_position("both")
-                        ax2.xaxis.set_ticks_position("both")
-
-                    print("Comparing", self.params[ipar], "and", self.params[jpar])
-
-                    minX = 1e100
-                    maxX = -1e100
-                    minY = 1e100
-                    maxY = -1e100
-
-                    nBins = 10
-
-                    for primkey in self.data.keys():
-                        prim = self.data[primkey]
-                        if not len(prim[ipar]):
-                            print("Primary", primkey, "has no entries for", self.params[ipar])
-                            continue
-                        minX = min([minX, min(prim[ipar])])
-                        maxX = max([maxX, max(prim[ipar])])
-                        minY = min([minY, min(prim[jpar])])
-                        maxY = max([maxY, max(prim[jpar])])
-                        nBins = int(np.sqrt(len(prim[ipar])) * 0.66)
-
-                    dX = abs(minX - maxX)
-                    minX -= dX * 0.1
-                    maxX += dX * 0.1
-                    dY = abs(minY - maxY)
-                    minY -= dY * 0.1
-                    maxY += dY * 0.1
-
-                    xBins = np.linspace(minX, maxX, nBins)
-                    yBins = np.linspace(minY, maxY, nBins)
-
-                    points = [[[] for i in range(len(self.sigmas))] for j in range(len(self.data))]
-
-                    for iprim, prim in enumerate(self.data.keys()):
-                        xVals = self.data[prim][ipar]
-                        yVals = self.data[prim][jpar]
-
-                        if not len(xVals) or not len(yVals):
-                            continue
-
-                        xBins, yBins, counts, contourLoc, contourZ = self.GetContoursForPlot(xVals, yVals, xBins, yBins)
-
-                        # Turn this back on to show the raw histogram
-                        # x, y = np.meshgrid(xBins, yBins)
-                        # plt.pcolormesh(x, y, np.log10(counts.T))
-
-                        cs = dumpAx.contour(contourLoc.T, contourZ, extent=[minX, maxX, minY, maxY])
-
-                        for isig in range(len(self.sigmas)):
-                            for p in cs.collections[len(self.sigmas) - 1 - isig].get_paths():
-                                v = p.vertices
-                                x = v[:, 0]
-                                y = v[:, 1]
-
-                                points[iprim][isig].append([x, y])
-
-                    style = ["-", "--", ":"]
-
-                    for isig in range(len(self.sigmas)):
-                        for iprim, prim in enumerate(self.data.keys()):
-
-                            # Get the lengths so that you can ignore the small outlying islands
-                            lens = [len(lineSet[0]) for lineSet in points[iprim][isig]]
-
-                            for lineSet in points[iprim][isig]:
-                                if len(lineSet[0]) != max(lens):  # ignore the little islands
-                                    continue
-
-                                ax.plot(lineSet[0], lineSet[1], lw=2.5, linestyle=style[isig % len(style)], color=self.primaryColors[iprim])
-                                ax.fill(lineSet[0], lineSet[1], color=self.primaryColors[iprim], alpha=0.2 / len(self.sigmas))
-
-                        ax.plot([], [], linestyle=style[isig % len(style)], lw=2.5, label="{}%".format(int(self.sigmas[len(self.sigmas) - 1 - isig] * 100)), color="k")
-
-                    for iprim, prim in enumerate(self.data.keys()):
-                        ax.plot([], [], lw=2.5, label=prim, color=self.primaryColors[iprim])
-
-                    xmin, xmax = ax.get_xlim()
-                    ymin, ymax = ax.get_ylim()
-
-                    ax.set_xlim(xmin, xmin + (xmax - xmin) * 1.0)
-                    ax.set_ylim(ymin, ymin + (ymax - ymin) * 1.0)
-                    ax.legend(loc="upper right", prop={"size": 14})
-
-                    ax.tick_params(direction="in", which="both", axis="both")
-                    ax.yaxis.set_ticks_position("both")
-                    ax.xaxis.set_ticks_position("both")
-
-            if fisherProjections == True:
-                igs = 0
-                for ipar in range(len(self.params)):
-
-                    ax3 = fig.add_subplot(gs[2, igs])
-                    igs += 1
-                    ax3.set_xlabel(f'{self.params[ipar]}')
-                    ax3.set_ylabel('Counts')
-
-                    projections = self.GetFisherProjections(ipar, jpar, normalize=True, singleVariable=True, allParams=False)
-
-                    minBin = min([min(val) for val in projections])
-                    maxBin = max([max(val) for val in projections])
-                    nBins = int(np.sqrt(len(projections[0])))
-
-                    vlineMax = 0
-                    means = []
-
-                    for iprim, prim in enumerate(self.data.keys()):
-
-                        yPrim, xPrim, junk = ax3.hist(projections[iprim], bins=np.linspace(minBin, maxBin, nBins),
-                                                      histtype='step', linewidth=2, color=self.primaryColors[iprim], label=prim)
-
-                        avgPrim = np.average(projections[iprim])
-                        stdevPrim = np.std(projections[iprim])
-
-                        means.append(avgPrim)
-
-                        ax3.vlines([avgPrim + stdevPrim, avgPrim - stdevPrim], 0, np.max(yPrim) + 10,
-                                   colors=self.primaryColors[iprim], linestyles='dashed', label=r'1$\sigma$ Bands')
-
-                        if np.max(yPrim) > vlineMax:
-                            vlineMax = np.max(yPrim)
-
-                    ax3.vlines(means, 0, vlineMax + 10, colors='black', linestyles='dashed', label='Average')
-
-                    if minBin < -3.:
-                        ax3.legend(loc="upper left", prop={"size": 14})
-                    else:
-                        ax3.legend(loc="upper right", prop={"size": 14})
-
-                    ax3.tick_params(direction="in", which="both", axis="both")
-                    ax3.yaxis.set_ticks_position("both")
-                    ax3.xaxis.set_ticks_position("both")
-
-            plt.savefig(filename, bbox_inches="tight")
-            print("Saved", filename)
-
-        else: # i.e. if individualPlots == True
-
-            fileSplit = filename.rsplit("/", 1)
-            fileNameString = fileSplit[-1].rsplit(".", 1)
-
-            dumpFig = plt.figure()
-            dumpAx = dumpFig.add_subplot(1, 1, 1)
-
-            nRows = 1
-            nCols = 1
-
-            gs = gridspec.GridSpec(nRows, nCols, wspace=0.3, hspace=0.3)
-
-            for ipar in range(len(self.params)):
-                for jpar in range(ipar + 1, len(self.params)):
-
-                    if fisherProjections == False:
-                        fig = plt.figure(figsize=(nCols * 18.0 / 2.54, nRows * 15.0 / 2.54))
-                        ax = fig.add_subplot(gs[0])
-                        ax.set_xlabel(self.params[ipar])
-                        ax.set_ylabel(self.params[jpar])
-                    else:
-                        fig = plt.figure(figsize=(nCols * 18.0 / 2.54, nRows * 15.0 / 2.54))
-                        fig2 = plt.figure(figsize=(nCols * 18.0 / 2.54, nRows * 15.0 / 2.54))
-                        ax = fig.add_subplot(gs[0])
-                        ax2 = fig2.add_subplot(gs[0])
-                        ax.set_xlabel(self.params[ipar])
-                        ax.set_ylabel(self.params[jpar])
-                        ax2.set_xlabel(f'Proj. ({self.params[ipar]}, {self.params[jpar]})')
-                        ax2.set_ylabel('Counts')
-
-                        # If I want all parameters in the projection plot then change allParams=True, also need to change ax2.set_xlabel()
-                        projections = self.GetFisherProjections(ipar, jpar, normalize=True, singleVariable=False, allParams=False)
-
-                        minBin = min([min(val) for val in projections])
-                        maxBin = max([max(val) for val in projections])
-                        nBins = int(np.sqrt(len(projections[0])))
-
-                        means = []
-                        stdevs = []
-
-                        ax2.plot([], [], linewidth=2, linestyle='dashed', color='black', label='Average')
-                        ax2.plot([], [], linewidth=2, linestyle='dotted', color='black', label=r'1$\sigma$ Bands')
-
-                        for iprim, prim in enumerate(self.data.keys()):
-
-                            yPrim, xPrim, junk = ax2.hist(projections[iprim], bins=np.linspace(minBin, maxBin, nBins),
-                                                          histtype='step', linewidth=2.5, color=self.primaryColors[iprim], label=prim)
-
-                            avgPrim = np.average(projections[iprim])
-                            stdevPrim = np.std(projections[iprim])
-
-                            means.append(avgPrim)
-                            stdevs.append(stdevPrim)
-
-                            ax2.vlines([avgPrim + stdevPrim, avgPrim - stdevPrim], 0, np.max(yPrim) + 10,
-                                       colors=self.primaryColors[iprim], linewidth=2, linestyles='dotted')
-                            ax2.vlines(avgPrim, 0, np.max(yPrim) + 10,
-                                       colors=self.primaryColors[iprim], linewidth=2, linestyles='dashed')
-
-                        projFOMval = abs(means[0] - means[1]) / np.sqrt(stdevs[0]**2 + stdevs[1]**2)
-
-
-                        #if minBin < -3.:
-                        if minBin < -4.:
-                            ax2.legend(loc="upper left", prop={"size": 14})
-                            ax2.text(0.03, 0.55, f"FOM = {projFOMval:.2f}", transform=ax2.transAxes, fontsize=18)
-                        else:
-                            ax2.legend(loc="upper right", prop={"size": 14})
-                            ax2.text(0.65, 0.55, f"FOM = {projFOMval:.2f}", transform=ax2.transAxes, fontsize=18)
-
-                        if self.observatoryName == "IceCube":
-                            ax2.text(0.40, 0.93, "IceCube", transform=ax2.transAxes, fontsize=18)
-                        elif self.observatoryName == "Auger":
-                            ax2.text(0.40, 0.93, "Auger", transform=ax2.transAxes, fontsize=18)
-
-                        ax2.tick_params(direction="in", which="both", axis="both")
-                        ax2.yaxis.set_ticks_position("both")
-                        ax2.xaxis.set_ticks_position("both")
-
-                        yName = self.plotNames[jpar]
-                        xName = self.plotNames[ipar]
-
-                        fileToSave = fileSplit[0] + "/projections/" + fileNameString[0] + f"_FisherProjections_w_FOM_{yName}_{xName}.pdf"
-                        fig2.savefig(fileToSave, bbox_inches="tight")
-                        print("Saved", fileToSave)
-
-                    print("Comparing", self.params[ipar], "and", self.params[jpar])
-
-                    minX = 1e100
-                    maxX = -1e100
-                    minY = 1e100
-                    maxY = -1e100
-
-                    nBins = 10
-
-                    for primkey in self.data.keys():
-                        prim = self.data[primkey]
-                        if not len(prim[ipar]):
-                            print("Primary", primkey, "has no entries for", self.params[ipar])
-                            continue
-                        minX = min([minX, min(prim[ipar])])
-                        maxX = max([maxX, max(prim[ipar])])
-                        minY = min([minY, min(prim[jpar])])
-                        maxY = max([maxY, max(prim[jpar])])
-                        nBins = int(np.sqrt(len(prim[ipar])) * 0.66)
-
-                    dX = abs(minX - maxX)
-                    minX -= dX * 0.1
-                    maxX += dX * 0.1
-                    dY = abs(minY - maxY)
-                    minY -= dY * 0.1
-                    maxY += dY * 0.1
-
-                    xBins = np.linspace(minX, maxX, nBins)
-                    yBins = np.linspace(minY, maxY, nBins)
-
-                    points = [[[] for i in range(len(self.sigmas))] for j in range(len(self.data))]
-
-                    for iprim, prim in enumerate(self.data.keys()):
-                        xVals = self.data[prim][ipar]
-                        yVals = self.data[prim][jpar]
-
-                        if not len(xVals) or not len(yVals):
-                            continue
-
-                        xBins, yBins, counts, contourLoc, contourZ = self.GetContoursForPlot(xVals, yVals, xBins, yBins)
-
-                        # Turn this back on to show the raw histogram
-                        # x, y = np.meshgrid(xBins, yBins)
-                        # plt.pcolormesh(x, y, np.log10(counts.T))
-
-                        cs = dumpAx.contour(contourLoc.T, contourZ, extent=[minX, maxX, minY, maxY])
-
-                        for isig in range(len(self.sigmas)):
-                            for p in cs.collections[len(self.sigmas) - 1 - isig].get_paths():
-                                v = p.vertices
-                                x = v[:, 0]
-                                y = v[:, 1]
-
-                                points[iprim][isig].append([x, y])
-
-                    style = ["-", "--", ":"]
-
-                    for isig in range(len(self.sigmas)):
-                        for iprim, prim in enumerate(self.data.keys()):
-
-                            # Get the lengths so that you can ignore the small outlying islands
-                            lens = [len(lineSet[0]) for lineSet in points[iprim][isig]]
-
-                            for lineSet in points[iprim][isig]:
-                                if len(lineSet[0]) != max(lens):  # ignore the little islands
-                                    continue
-                                # Uncomment this block when making TDR plots to remove small outcropping which looks odd...
-                                '''
-                                if self.plotNames[jpar] == "nMuHighE" and self.plotNames[ipar] == "Xmax" and iprim == 0 and isig == 1:
-                                    listXvals = list(lineSet[0])
-                                    listYvals = list(lineSet[1])
-                                    deletedVals = 0
-                                    for ivalue in range(len(lineSet[0])):
-                                        if listXvals[ivalue - deletedVals] > 900. and listYvals[ivalue - deletedVals] < 3.405:
-                                            del listXvals[ivalue - deletedVals]
-                                            del listYvals[ivalue - deletedVals]
-                                            deletedVals += 1
-
-                                    plotArrayX = np.array(listXvals)
-                                    plotArrayY = np.array(listYvals)
-
-                                if self.plotNames[jpar] == "nMuHighE" and self.plotNames[ipar] == "Xmax" and iprim == 0 and isig == 1:
-                                    ax.plot(plotArrayX, plotArrayY, lw=2.5, linestyle=style[isig % len(style)], color=self.primaryColors[iprim])
-                                    ax.fill(plotArrayX, plotArrayY, color=self.primaryColors[iprim], alpha=0.2 / len(self.sigmas))
-                                else:
-                                    ax.plot(lineSet[0], lineSet[1], lw=2.5, linestyle=style[isig % len(style)], color=self.primaryColors[iprim])
-                                    ax.fill(lineSet[0], lineSet[1], color=self.primaryColors[iprim], alpha=0.2 / len(self.sigmas))
-                                '''
-                                ax.plot(lineSet[0], lineSet[1], lw=2.5, linestyle=style[isig % len(style)], color=self.primaryColors[iprim])
-                                ax.fill(lineSet[0], lineSet[1], color=self.primaryColors[iprim], alpha=0.2 / len(self.sigmas))
-
-                        ax.plot([], [], linestyle=style[isig % len(style)], lw=2.5, label="{}%".format(int(self.sigmas[len(self.sigmas) - 1 - isig] * 100)), color="k")
-
-                    for iprim, prim in enumerate(self.data.keys()):
-                        ax.plot([], [], lw=2.5, label=prim, color=self.primaryColors[iprim])
-
-                    xmin, xmax = ax.get_xlim()
-                    ymin, ymax = ax.get_ylim()
-
-                    ax.set_xlim(xmin, xmin + (xmax - xmin) * 1.0)
-                    ax.set_ylim(ymin, ymin + (ymax - ymin) * 1.0)
-                    ax.legend(loc="upper right", prop={"size": 14})
-
-                    ax.tick_params(direction="in", which="both", axis="both")
-                    ax.yaxis.set_ticks_position("both")
-                    ax.xaxis.set_ticks_position("both")
-
-                    yName = self.plotNames[jpar]
-                    xName = self.plotNames[ipar]
-
-                    if self.observatoryName == "IceCube":
-                        ax.text(0.40, 0.93, "IceCube", transform=ax.transAxes, fontsize=18)
-                    elif self.observatoryName == "Auger":
-                        ax.text(0.40, 0.93, "Auger", transform=ax.transAxes, fontsize=18)
-
-                    if yName == "nEM" and xName == "nMuHighE":
-                        ax.text(0.03, 0.93, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
-                    elif yName == "RatioEMnMuHighE" and xName == "Xmax":
-                        ax.text(0.03, 0.93, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
-                    elif yName == "nMuHighE" and xName == "Xmax":
-                        ax.text(0.03, 0.11, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
-                        ax.text(0.03, 0.04, r"E = $10^{16.5}-10^{16.9}$ eV", transform=ax.transAxes, fontsize=18)
-                        if self.flagScalingCorrections == False:
-                            ax.text(0.31, 0.87, "(Before Scaling)", transform=ax.transAxes, fontsize=18)
-                        else: # i.e. if self.flagScalingCorrections == True
-                            ax.text(0.33, 0.87, "(After Scaling)", transform=ax.transAxes, fontsize=18) 
-                    elif yName == "RatioEMnMuHighE" and xName == "nMuHighE":
-                        ax.text(0.05, 0.05, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
-                    elif yName == "nEMObslev" and xName == "nMuHighE":
-                        ax.text(0.03, 0.11, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
-                        ax.text(0.03, 0.04, r"E = $10^{16.5}-10^{16.9}$ eV", transform=ax.transAxes, fontsize=18)
-                    elif yName == "RatioEMObslevnMuHighE" and xName == "Xmax":
-                        ax.text(0.48, 0.11, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
-                        #ax.text(0.03, 0.04, rf"lg(E/eV) = {self.minLgE:.1f}$-${self.maxLgE:.1f}", transform=ax.transAxes, fontsize=18)
-                        ax.text(0.48, 0.04, r"E = $10^{16.5}-10^{16.9}$ eV", transform=ax.transAxes, fontsize=18)
-                    elif yName == "RatioEMObslevnMu800m" and xName == "Xmax":
-                        ax.text(0.48, 0.11, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
-                        ax.text(0.48, 0.04, r"E = $10^{16.5}-10^{16.9}$ eV", transform=ax.transAxes, fontsize=18)
-                    elif yName == "nMu800m" and xName == "Xmax":
-                        ax.text(0.03, 0.11, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
-                        ax.text(0.03, 0.04, r"E = $10^{16.5}-10^{16.9}$ eV", transform=ax.transAxes, fontsize=18)
-                    elif yName == "Lval" and xName == "Xmax":
-                        ax.text(0.48, 0.11, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
-                        ax.text(0.48, 0.04, r"E = $10^{16.5}-10^{16.9}$ eV", transform=ax.transAxes, fontsize=18)
-                    else:
-                        print("No need to include text in plot...")                    
-
-                    fileToSave = fileSplit[0] + "/contours/" + fileNameString[0] + f"_Contours_{yName}_{xName}.pdf"
-                    fig.savefig(fileToSave, bbox_inches="tight")
-                    print("Saved", fileToSave)
-
-            if fisherProjections == True:
-                for ipar in range(len(self.params)):
-
-                    fig3 = plt.figure(figsize=(nCols * 18.0 / 2.54, nRows * 15.0 / 2.54))
-
-                    ax3 = fig3.add_subplot(gs[0])
-                    ax3.set_xlabel(f'{self.params[ipar]}')
-                    ax3.set_ylabel('Counts')
-
-                    projections = self.GetFisherProjections(ipar, jpar, normalize=True, singleVariable=True, allParams=False)
-
-                    minBin = min([min(val) for val in projections])
-                    maxBin = max([max(val) for val in projections])
-                    nBins = int(np.sqrt(len(projections[0])))
-
-                    for iprim, prim in enumerate(self.data.keys()):
-
-                        yPrim, xPrim, junk = ax3.hist(projections[iprim], bins=np.linspace(minBin, maxBin, nBins),
-                                                      histtype='step', linewidth=2.5, color=self.primaryColors[iprim], label=prim)
-
-                        avgPrim = np.average(projections[iprim])
-                        stdevPrim = np.std(projections[iprim])
-
-                        ax3.vlines([avgPrim + stdevPrim, avgPrim - stdevPrim], 0, np.max(yPrim) + 10,
-                                   colors=self.primaryColors[iprim], linewidth=2, linestyles='dotted')
-                        ax3.vlines(avgPrim, 0, np.max(yPrim) + 10,
-                                   colors=self.primaryColors[iprim], linewidth=2, linestyles='dashed')
-
-                    ax3.plot([], [], linewidth=2, linestyle='dashed', color='black', label='Average')
-                    ax3.plot([], [], linewidth=2, linestyle='dotted', color='black', label=r'1$\sigma$ Bands')
-
-                    if minBin < -3.:
-                        ax3.legend(loc="upper left", prop={"size": 14})
-                    else:
-                        ax3.legend(loc="upper right", prop={"size": 14})
-
-                    ax3.tick_params(direction="in", which="both", axis="both")
-                    ax3.yaxis.set_ticks_position("both")
-                    ax3.xaxis.set_ticks_position("both")
-
-                    xName = self.plotNames[ipar]
-
-                    fileToSave = fileSplit[0] + "/histograms/" + fileNameString[0] + f"_Histogram_{xName}.pdf"
-                    fig3.savefig(fileToSave, bbox_inches="tight")
-                    print("Saved", fileToSave)
-
-
-    def CalculateFOM(self, calculateUncertainties=False, NTrials=30):
-
-        for iprim, prim1 in enumerate(self.fisherBlocks.keys()):
-            if not len(self.fisherBlocks[prim1].data):
-                continue
-            for jprim, prim2 in enumerate(self.fisherBlocks.keys()):
-                if jprim <= iprim:
-                    continue
-                if not len(self.fisherBlocks[prim2].data):
-                    continue
-
-                fom = FisherTools.FisherFOM(self.fisherBlocks[prim1], self.fisherBlocks[prim2])
-                print("Comparing", prim1, "and", prim2, " \tFOM: {0:0.2f}".format(fom))
-
-        if not calculateUncertainties:
-            return fom
-
-        print("\tSmearing...")
-
-        # Entries are [exact, only par1, only par2, ...]
-        fomsExact = [[] for i in range(len(self.params) + 1)]
-        fomsSmear = [[] for i in range(len(self.params) + 1)]
-
-        for itrial in range(NTrials):
-            # if itrial and itrial % 10 == 0:
-            #   print(itrial, "/", NTrials)
-            newFisherBlocks = {}
-            smearFisherBlocks = {}
-
-            for key in self.primaryNames.keys():
-                self.data[self.primaryNames[key]] = [[] for i in range(len(self.params))]
-                prim = self.primaryNames[key]
-                newFisherBlocks[prim] = FisherTools.FisherBlock(len(self.params))
-                smearFisherBlocks[prim] = FisherTools.FisherBlock(len(self.params))
-
-                for ientry in range(len(self.fisherBlocks[prim].data)):
-
-                    vals = random.choice(self.fisherBlocks[prim].data)
-
-                    newFisherBlocks[prim].AddSample(vals)
-                    smearedVals = np.array(vals)
-                    self.SmearValues(smearedVals)
-                    smearFisherBlocks[prim].AddSample(smearedVals)
-
-            for iprim, prim1 in enumerate(newFisherBlocks.keys()):
-                if not len(self.fisherBlocks[prim1].data):
-                    continue
-                for jprim, prim2 in enumerate(newFisherBlocks.keys()):
-                    if jprim <= iprim:
+                for primkey in self.data.keys():
+                    prim = self.data[primkey]
+                    if not len(prim[ipar]):
+                        print("Primary", primkey, "has no entries for", self.params[ipar])
                         continue
-                    if not len(self.fisherBlocks[prim2].data):
+                    minX = min([minX, min(prim[ipar])])
+                    maxX = max([maxX, max(prim[ipar])])
+                    minY = min([minY, min(prim[jpar])])
+                    maxY = max([maxY, max(prim[jpar])])
+                    nBins = int(np.sqrt(len(prim[ipar])) * 0.66)
+
+                dX = abs(minX - maxX)
+                minX -= dX * 0.1
+                maxX += dX * 0.1
+                dY = abs(minY - maxY)
+                minY -= dY * 0.1
+                maxY += dY * 0.1
+
+                xBins = np.linspace(minX, maxX, nBins)
+                yBins = np.linspace(minY, maxY, nBins)
+
+                points = [[[] for i in range(len(self.sigmas))] for j in range(len(self.data))]
+
+                for iprim, prim in enumerate(self.data.keys()):
+                    xVals = self.data[prim][ipar]
+                    yVals = self.data[prim][jpar]
+
+                    if not len(xVals) or not len(yVals):
                         continue
 
-                    thisFOM = FisherTools.FisherFOM(newFisherBlocks[prim1], newFisherBlocks[prim2])
-                    fomsExact[0].append(thisFOM)
+                    xBins, yBins, counts, contourLoc, contourZ = self.GetContoursForPlot(xVals, yVals, xBins, yBins)
 
-                    # Construct a set of weights, only using a single component
-                    for ipar in range(len(self.params)):
-                        w = np.zeros(len(self.params))
-                        w[ipar] = 1.0
-                        thisFOM = FisherTools.FisherFOM(newFisherBlocks[prim1], newFisherBlocks[prim2], w)
-                        fomsExact[1 + ipar].append(thisFOM)
+                    # Turn this back on to show the raw histogram
+                    # x, y = np.meshgrid(xBins, yBins)
+                    # plt.pcolormesh(x, y, np.log10(counts.T))
 
-                    # Do the same for the smeared values
-                    thisFOM = FisherTools.FisherFOM(smearFisherBlocks[prim1], smearFisherBlocks[prim2])
-                    fomsSmear[0].append(thisFOM)
+                    cs = dumpAx.contour(contourLoc.T, contourZ, extent=[minX, maxX, minY, maxY])
 
-                    for ipar in range(len(self.params)):
-                        w = np.zeros(len(self.params))
-                        w[ipar] = 1.0
-                        thisFOM = FisherTools.FisherFOM(smearFisherBlocks[prim1], smearFisherBlocks[prim2], w)
-                        fomsSmear[1 + ipar].append(thisFOM)
+                    for isig in range(len(self.sigmas)):
+                        for p in cs.collections[len(self.sigmas) - 1 - isig].get_paths():
+                            v = p.vertices
+                            x = v[:, 0]
+                            y = v[:, 1]
 
-            del newFisherBlocks
-            del smearFisherBlocks
+                            points[iprim][isig].append([x, y])
 
-        fomNominal = np.average(fomsExact, axis=1)
-        fomUncertainty = np.std(fomsExact, axis=1)
-        fomSmear = np.average(fomsSmear, axis=1)
-        fomSmearUncert = np.std(fomsSmear, axis=1)
+                style = ["-", "--", ":"]
 
-        for ipar in range(len(self.params) + 1):
-            if ipar:
-                print("  Only", self.params[ipar - 1])
-            else:
-                print("  All params:")
-            print("    Nominal FOM: {0:0.3f} +/- {1:0.3f}, std: {2:0.3f}".format(fomNominal[ipar], fomUncertainty[ipar] / np.sqrt(NTrials), fomUncertainty[ipar]))
-            print("    Smeared FOM: {0:0.3f} +/- {1:0.3f}, std: {2:0.3f}".format(fomSmear[ipar], fomSmearUncert[ipar] / np.sqrt(NTrials), fomSmearUncert[ipar]))
+                for isig in range(len(self.sigmas)):
+                    for iprim, prim in enumerate(self.data.keys()):
 
-        if calculateUncertainties:
-            return fomNominal, fomUncertainty, fomSmear, fomSmearUncert
-        else:
-            return fom
+                        # Get the lengths so that you can ignore the small outlying islands
+                        lens = [len(lineSet[0]) for lineSet in points[iprim][isig]]
 
+                        for lineSet in points[iprim][isig]:
+                            if len(lineSet[0]) != max(lens):  # ignore the little islands
+                                continue
 
-    def CalcAvgAndStdev(self, paramName):
+                            ax.plot(lineSet[0], lineSet[1], lw=2.5, linestyle=style[isig % len(style)], color=self.primaryColors[iprim])
+                            ax.fill(lineSet[0], lineSet[1], color=self.primaryColors[iprim], alpha=0.2 / len(self.sigmas))
 
-        paramInd = [i for i in range(len(self.params)) if self.params[i] == paramName]
+                    ax.plot([], [], linestyle=style[isig % len(style)], lw=2.5, label="{}%".format(int(self.sigmas[len(self.sigmas) - 1 - isig] * 100)), color="k")
 
-        newFisherBlocks = {}
+                for iprim, prim in enumerate(self.data.keys()):
+                    ax.plot([], [], lw=2.5, label=prim, color=self.primaryColors[iprim])
 
-        paramAvgs = []
-        paramStds = []
-        primary = []
+                xmin, xmax = ax.get_xlim()
+                ymin, ymax = ax.get_ylim()
 
-        for key in self.primaryNames.keys():
-            prim = self.primaryNames[key]
-            newFisherBlocks[prim] = FisherTools.FisherBlock(1)
+                ax.set_xlim(xmin, xmin + (xmax - xmin) * 1.0)
+                ax.set_ylim(ymin, ymin + (ymax - ymin) * 1.0)
+                ax.legend(loc="upper right", prop={"size": 14})
 
-            newFisherBlocks[prim].data = [val[paramInd[0]] for val in self.fisherBlocks[prim].data]
+                ax.tick_params(direction="in", which="both", axis="both")
+                ax.yaxis.set_ticks_position("both")
+                ax.xaxis.set_ticks_position("both")
 
-            paramAvgs.append(np.average(newFisherBlocks[prim].data))
-            paramStds.append(np.std(newFisherBlocks[prim].data))
-            primary.append(prim)
+                yName = self.plotNames[jpar]
+                xName = self.plotNames[ipar]
 
-        return paramAvgs, paramStds, primary
+                if self.observatoryName == "IceCube":
+                    ax.text(0.40, 0.93, "IceCube", transform=ax.transAxes, fontsize=18)
+                elif self.observatoryName == "Auger":
+                    ax.text(0.40, 0.93, "Auger", transform=ax.transAxes, fontsize=18)
+
+                if yName == "nEM" and xName == "nMuHighE":
+                    ax.text(0.03, 0.93, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
+                elif yName == "RatioEMnMuHighE" and xName == "Xmax":
+                    ax.text(0.03, 0.93, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
+                elif yName == "nMuHighE" and xName == "Xmax":
+                    ax.text(0.03, 0.11, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
+                    ax.text(0.03, 0.04, r"E = $10^{16.5}-10^{16.9}$ eV", transform=ax.transAxes, fontsize=18)
+                    if self.flagScalingCorrections == False:
+                        ax.text(0.31, 0.87, "(Before Scaling)", transform=ax.transAxes, fontsize=18)
+                    else: # i.e. if self.flagScalingCorrections == True
+                        ax.text(0.33, 0.87, "(After Scaling)", transform=ax.transAxes, fontsize=18) 
+                elif yName == "RatioEMnMuHighE" and xName == "nMuHighE":
+                    ax.text(0.05, 0.05, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
+                elif yName == "nEMObslev" and xName == "nMuHighE":
+                    ax.text(0.03, 0.11, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
+                    ax.text(0.03, 0.04, r"E = $10^{16.5}-10^{16.9}$ eV", transform=ax.transAxes, fontsize=18)
+                elif yName == "RatioEMObslevnMuHighE" and xName == "Xmax":
+                    ax.text(0.48, 0.11, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
+                    #ax.text(0.03, 0.04, rf"lg(E/eV) = {self.minLgE:.1f}$-${self.maxLgE:.1f}", transform=ax.transAxes, fontsize=18)
+                    ax.text(0.48, 0.04, r"E = $10^{16.5}-10^{16.9}$ eV", transform=ax.transAxes, fontsize=18)
+                elif yName == "RatioEMObslevnMu800m" and xName == "Xmax":
+                    ax.text(0.48, 0.11, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
+                    ax.text(0.48, 0.04, r"E = $10^{16.5}-10^{16.9}$ eV", transform=ax.transAxes, fontsize=18)
+                elif yName == "nMu800m" and xName == "Xmax":
+                    ax.text(0.03, 0.11, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
+                    ax.text(0.03, 0.04, r"E = $10^{16.5}-10^{16.9}$ eV", transform=ax.transAxes, fontsize=18)
+                elif yName == "Lval" and xName == "Xmax":
+                    ax.text(0.48, 0.11, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
+                    ax.text(0.48, 0.04, r"E = $10^{16.5}-10^{16.9}$ eV", transform=ax.transAxes, fontsize=18)
+                else:
+                    print("No need to include text in plot...")                    
+
+                fileToSave = fileSplit[0] + "/contours/" + fileNameString[0] + f"_Contours_{yName}_{xName}.pdf"
+                fig.savefig(fileToSave, bbox_inches="tight")
+                print("Saved", fileToSave)
+
 
 
     ###################################################################################################
@@ -2124,40 +1591,5 @@ class MultivariateMassAnalysis(object):
             else:
                 print(f"Events With Failed CORSIKA Fit (After Data Cuts) for {prim}: {eventsCORSIKAFail}")
                 print(f"Events to be Cut From Analysis (NOT including failed CORSIKA fits) for {prim}: {eventsToBeCut}")
-
-
-    def GetFOMValuesFromFisherProjections(self):
-
-        for ipar in range(len(self.params)):
-            for jpar in range(len(self.params)):
-
-                #if self.params[ipar] != r"lg(N$_{{\rm e}}$)":
-                #    continue
-                # If I want to uncomment the above lines to only check FOM values of combinations w/ Ne at ground then I also must edit
-                # "electronNumberObslev = True" in the class definition! 
-
-                print("Comparing", self.params[ipar], "and", self.params[jpar])
-
-                if ipar == jpar:
-                    projections = self.GetFisherProjections(ipar, jpar, normalize=True, singleVariable=True, allParams=False)
-                else:
-                    projections = self.GetFisherProjections(ipar, jpar, normalize=True, singleVariable=False, allParams=False)
-
-                means = []
-                stdevs = []
-
-                for iprim, prim in enumerate(self.data.keys()):
-
-                    avgPrim = np.average(projections[iprim])
-                    stdevPrim = np.std(projections[iprim])
-
-                    means.append(avgPrim)
-                    stdevs.append(stdevPrim)
-
-                projFOMval = abs(means[0] - means[1]) / np.sqrt(stdevs[0]**2 + stdevs[1]**2)
-
-                print("      FOM value: ", projFOMval)
-                print("\n")
-
 
 
