@@ -832,7 +832,7 @@ class MultivariateMassAnalysis(object):
         return xBins, yBins, counts, countsNorm, t_contours
 
 
-    def MakeContourPlots(self, filename):
+    def MakeContourPlots(self, filename, showRawHistograms=False):
 
         fileSplit = filename.rsplit("/", 1)
         fileNameString = fileSplit[-1].rsplit(".", 1)
@@ -894,9 +894,10 @@ class MultivariateMassAnalysis(object):
 
                     xBins, yBins, counts, contourLoc, contourZ = self.GetContoursForPlot(xVals, yVals, xBins, yBins)
 
-                    # Turn this back on to show the raw histogram
-                    # x, y = np.meshgrid(xBins, yBins)
-                    # plt.pcolormesh(x, y, np.log10(counts.T))
+                    if showRawHistograms == True:
+                        # Need to check if this still works...
+                        x, y = np.meshgrid(xBins, yBins)
+                        plt.pcolormesh(x, y, np.log10(counts.T))
 
                     cs = dumpAx.contour(contourLoc.T, contourZ, extent=[minX, maxX, minY, maxY])
 
