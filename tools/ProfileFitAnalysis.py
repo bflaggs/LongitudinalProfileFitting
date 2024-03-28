@@ -1,4 +1,8 @@
-# Use this file for plotting contours, projection plots, and FOM plots for multivariate mass sensitivity analysis
+# Use this file for plotting contours, histograms, and analyzing poor fit fractions of the longitudinal profile fits
+# It's still not fully up to date or optimized for the profile fitting but everything that I used is here...
+# I am still working on making it as modular as possible, w/o needing the sims from my mass sensitivity/separation PRD analysis
+# --- BSF 28/03/2024  19:37 CET
+
 
 import matplotlib
 
@@ -16,11 +20,11 @@ from scipy import interpolate, stats
 import random
 import numpy as np
 
-from .ASCIIFileReader import Event
+from .FileReader import Event
 from .PlottingTools import qualitative_colors
 
 
-class MultivariateMassAnalysis(object):
+class ProfileFitAnalysis(object):
 
     allObservables = [r"$X_{\rm max}$ (g/cm$^2$)",
                       r"lg(N$_{{\rm e, max}}$)", r"lg(N$_{{\rm e}}$)", "R", r"L (g/cm$^2$)"]
@@ -202,14 +206,7 @@ class MultivariateMassAnalysis(object):
                 event.zenith = zenith
                 event.azimuth = azimuth
 
-                # Test...
-                # If using, should also change highE muon name in 'allObservables' list!
-                #event.n500GeVMuObslev = float(cols[5]) # Number of muons at ground w/ E > 300 GeV (IC), w/ E > 1 GeV (Auger)
-                #event.n500GeVMuObslev = float(cols[7]) # Number of muons at ground w/ E > 1 TeV = 1000 GeV, use scaling of 0.82 instead of 0.83...
-
                 event.xmax = float(cols[53])
-                event.n500GeVMuObslev = float(cols[6])
-                event.nMuonsObslev = float(cols[4]) # Number of muons at ground (at Obslev)
                 event.nEmAtXmax = float(cols[55])
                 event.nEmObslev = float(cols[32]) # Number of electrons/positrons at ground (at Obslev)
 
@@ -230,48 +227,6 @@ class MultivariateMassAnalysis(object):
 
                 event.XmaxfitAndringa = float(cols[69]) # Xmax from Andringa fit to .long file
                 event.sigmaXmaxfitAndringa = float(cols[70]) # Uncertainty in Xmax from Andringa fit
-
-                event.nMu50m = float(cols[12])
-                event.nMu100m = float(cols[13])
-                event.nMu150m = float(cols[14])
-                event.nMu200m = float(cols[15])
-                event.nMu250m = float(cols[16])
-                event.nMu300m = float(cols[17])
-                event.nMu350m = float(cols[18])
-                event.nMu400m = float(cols[19])
-                event.nMu450m = float(cols[20])
-                event.nMu500m = float(cols[21])
-                event.nMu550m = float(cols[22])
-                event.nMu600m = float(cols[23])
-                event.nMu650m = float(cols[24])
-                event.nMu700m = float(cols[25])
-                event.nMu750m = float(cols[26])
-                event.nMu800m = float(cols[27])
-                event.nMu850m = float(cols[28])
-                event.nMu900m = float(cols[29])
-                event.nMu950m = float(cols[30])
-                event.nMu1000m = float(cols[31])
-
-                event.nEM50m = float(cols[33])
-                event.nEM100m = float(cols[34])
-                event.nEM150m = float(cols[35])
-                event.nEM200m = float(cols[36])
-                event.nEM250m = float(cols[37])
-                event.nEM300m = float(cols[38])
-                event.nEM350m = float(cols[39])
-                event.nEM400m = float(cols[40])
-                event.nEM450m = float(cols[41])
-                event.nEM500m = float(cols[42])
-                event.nEM550m = float(cols[43])
-                event.nEM600m = float(cols[44])
-                event.nEM650m = float(cols[45])
-                event.nEM700m = float(cols[46])
-                event.nEM750m = float(cols[47])
-                event.nEM800m = float(cols[48])
-                event.nEM850m = float(cols[49])
-                event.nEM900m = float(cols[50])
-                event.nEM950m = float(cols[51])
-                event.nEM1000m = float(cols[52])
 
                 self.eventList.append(event)
 
