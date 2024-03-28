@@ -4,16 +4,28 @@
 # Description of file and file usage #
 ######################################
 
-# File to fit the longitudinal distributions from CORSIKA .long files ro determine R and L parameters
+# File to fit the longitudinal distributions from CORSIKA .long files to determine R and L parameters
+# Will also make plot comparing fits
 
 # Run by executing the command...
-# ./PlotLongitudinalDistributions.py PATH_TO_LONG_FILE --kwargs
+# ./LongitudinalDistributionPlotting.py PATH_TO_LONG_FILE --kwargs
 
 # PATH_TO_ASCII_FILES for diffrent experiments:
-# IceCube -> /home/acoleman/sim/coreas/data/continuous/star-pattern/PRIMARY/ENERGY_BIN/ZENITH_BIN/xxxxxx/DATxxxxxx.long
+# IceCube -> /home/bflaggs/simulations/coreas/data/continuous/star-pattern/{PRIMARY}/{ENERGY_BIN}/{ZENITH_BIN}/xxxxxx/DATxxxxxx.long
 # Auger   -> Note currently accesible unless saved by hand
 
 # Note: Fits will nominally be to all particle longitudinal distributions but can be performed for only electromagentic (e+/e-) particles
+
+# MAJOR NOTE: This script does the fitting "on the fly", so if you have a submission script to fit all the longitudinal profiles then
+# =========== it's possible these profile fits will differ from the fits done via the submission script. I tried to avoid this by
+# =========== explicitly setting the initial parameter guesses for the fits, both here and in the submission script, but it may also
+# =========== depend on the random seed. You could avoid this completely by setting the random seed but then you might
+# =========== get stuck in a local minima for the fit...
+
+# To-do:
+# ------ Add another fit parameter which is the maximum particle number (either all-charged or e+/e- numbers)
+# ------ Fix chi-square calculation
+# ------ Do further testing of fits with scipy.curve_fit keyword, absolute_sigma=True
 
 ######################
 # End of description #
@@ -38,8 +50,6 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("input", type=str, nargs="?", default="DATxxxxxx.long", help="Path to .long CORSIKA output file")
 parser.add_argument("--observatory", type=str, nargs="?", required=True, default="IceCube", help="Name of observatory (either IceCube or Auger)")
-#parser.add_argument("--zenithRange", type=float, nargs=2, default=[40.0, 50.0], help="Zenith range of data to plot")
-#parser.add_argument("--energyRange", type=float, nargs=2, default=[16.5, 16.9], help="lg(E) energy range of data to plot")
 parser.add_argument("--emParticles", action="store_true", help="If set, will plot longitudinal distributions from the electromagnetic particles only.")
 parser.add_argument("--applyFits", action="store_true", help="If set, will apply GH fits to the longitudinal distributions.")
 parser.add_argument("--compareCONEX", action="store_true", help="If applicable, will plot the original CORSIKA .long file to the CONEX .long file.")
@@ -50,20 +60,12 @@ if os.path.isfile(args.input) == False:
     raise ValueError("Input filename does not exist, try again.")
 
 if args.observatory == "Auger":
-    raise ValueError("Can not plot the longitudinal profiles for Auger unless the profiles have been saved individually.")
+    raise ValueError("Can not plot the longitudinal profiles for Auger unless the profiles have been saved individually. Or you could update my code :)")
 
 fileToRead = args.input
 
-#fileToRead = "/home/acoleman/sim/coreas/data/continuous/star-pattern/proton/lgE_17.0/sin2_0.5/000001/DAT000001.long"
+#fileToRead = ABS_PATH_TO_AUGER_LONG_FILE
 
-#fileToRead = "/home/acoleman/sim/coreas/data/continuous/star-pattern/proton/lgE_18.1/sin2_0.0/000000/DAT000000.long" # Originally good profile fit
-#fileToRead = "/home/acoleman/sim/coreas/data/continuous/star-pattern/proton/lgE_18.1/sin2_0.0/000001/DAT000001.long" # Originally bad profile fit
-
-#fileToRead = "/home/acoleman/sim/coreas/data/continuous/star-pattern/proton/lgE_16.0/sin2_0.7/000027/DAT000027.long" # One out of three fits w/ Xmax < 0 (after data cuts)
-#fileToRead = "/home/acoleman/sim/coreas/data/continuous/star-pattern/proton/lgE_17.3/sin2_0.0/000041/DAT000041.long" # Two out of three fits w/ Xmax < 0 (after data cuts)
-#fileToRead = "/home/acoleman/sim/coreas/data/continuous/star-pattern/proton/lgE_17.7/sin2_0.1/000138/DAT000138.long" # Three out of three fits w/ Xmax < 0 (after data cuts)
-#fileToRead = "/home/acoleman/sim/coreas/data/continuous/star-pattern/proton/lgE_16.0/sin2_0.6/000118/DAT000118.long" # Four out of five fits w/ Xmax < 0 (before data cuts)
-#fileToRead = "/home/acoleman/sim/coreas/data/continuous/star-pattern/proton/lgE_16.9/sin2_0.3/000008/DAT000008.long" # Five out of five fits w/ Xmax < 0 (before data cuts)
 
 
 fileSplit = fileToRead.split("/")
@@ -96,9 +98,9 @@ def LongFileParser(filename):
     Rcorsika = -1
     Lcorsika = -1
     if args.useEnergyDeposit == True:
-        energyDeposit = 1
+        skipLines = 1
     else:
-        energyDeposit = 0
+        skipLines = 0
 
     for iline, line in enumerate(file):
         if iline == 0:
@@ -112,14 +114,14 @@ def LongFileParser(filename):
 
         if "ENERGY" in cols and "DEPOSIT" in cols:
             if args.useEnergyDeposit == True:
-                energyDeposit -= 1
+                skipLines -= 1
             else:
-                energyDeposit += 1
+                skipLines += 1
 
         if "PARAMETERS" in cols:
             xmax = float(cols[4])
             x0 = float(cols[3])
-            lambdaApprox = float(cols[5]) # Drop 1st + 2nd order corrections
+            lambdaApprox = float(cols[5]) # Drop 1st + 2nd order corrections in CORSIKA Gaisser-Hillas fit
 
             x0Prime = x0 - xmax
             Rcorsika = float(np.sqrt(lambdaApprox / abs(x0Prime))) # Shape parameter
@@ -128,8 +130,8 @@ def LongFileParser(filename):
         if len(cols) != 10 or "FIT" in cols or "DEPTH" in cols:
             continue
 
-        if energyDeposit > 0:
-            continue  # Skip all unwanted lines in .long file (either particle numbers or energy deposit, depending on keywords)
+        if skipLines > 0:
+            continue  # Skip all unwanted lines in .long file (either particle numbers or energy deposit, note this depends on format of CORSIKA .long output)
 
         depths.append(float(cols[0]))
         positrons.append(float(cols[2]))
@@ -178,7 +180,7 @@ def FitLongitudinalProfile(depths, chargedParticles, NmaxGuess, XmaxGuess, X0Gue
     # Take uncertainty as ratio of uncertainty in bin to particle number in bin so bins with more particles have less uncertainty than those with less particles
     uncerts = 1.0 / np.sqrt(particleArray)
 
-    # Insert a try-except statement for poor fits...
+    # Insert a try-except statement for poor fits. Return infinities if fit fails.
     try:
         if shiftDepths == True:
             popt, pcov = curve_fit(GHFunction, depthArray, particleArray, p0=[NmaxGuess, XmaxGuess+100.0, X0Guess, lambGuess], sigma=uncerts)
@@ -204,9 +206,6 @@ def FitLongitudinalProfile(depths, chargedParticles, NmaxGuess, XmaxGuess, X0Gue
     X0Sigma = perr[2]
     lambSigma = perr[3]
 
-    #print(NmaxFit, XmaxFit, X0Fit, lambFit)
-    #print(NmaxSigma, XmaxSigma, X0Sigma, lambSigma)
-
     X0Prime = abs(X0Fit - XmaxFit)
 
     RFit = np.sqrt(lambFit / X0Prime)
@@ -231,6 +230,8 @@ def FitLongitudinalProfile(depths, chargedParticles, NmaxGuess, XmaxGuess, X0Gue
         XmaxFit = popt[1]
         X0Fit = popt[2]
 
+    # I never really got this to work well...
+    # Reduced chisq values were always super high or super low but maybe I'm just a dumbass
     if calcChi2 == True:
         fit = GHFunction(depthArray, *popt)
         resid = particleArray - fit
@@ -284,6 +285,7 @@ def FitLongitudinalProfileAndringa(depths, NprimeArray, XmaxGuess, RGuess, LGues
     else:
         XmaxAndringaFit = popt[0]
 
+    # Again, I never go this to work well/correctly...
     if calcChi2 == True:
         fit = AndringaFunction(depthArray, *popt)
         resid = NprimeArray - fit
@@ -331,7 +333,7 @@ chargedParticles, depths = remove_zeros(chargedParticles, depths)
 print(NmaxGuess, XmaxGuess, X0Guess, lambGuess)
 
 # Remove the last point in the longitudinal distributions b/c it is not physical (sometimes below ground)
-# Agnieszka suggested removing the final two points but start with only the final point at first
+# Agnieszka suggested removing the final two points as they both looked unphysical
 depths.pop()
 positrons.pop()
 electrons.pop()
@@ -359,9 +361,6 @@ else:
         plotLabel = "Shower Profile"
     RFit, RFitSigma, LFit, LFitSigma, XmaxFit, XmaxSigma, NmaxFit, X0Fit, lambFit, NmaxSigma, X0Sigma, lambSigma = FitLongitudinalProfile(depths, chargedParticles, NmaxGuess, XmaxGuess, X0Guess, lambGuess, calcChi2=False, shiftDepths=False)
 
-#RFit, RFitSigma, LFit, LFitSigma, XmaxFit, XmaxSigma, NmaxFit, X0Fit, lambFit, NmaxSigma, X0Sigma, lambSigma, GHChisq, GHReducedChisq = FitLongitudinalProfile(depths, chargedParticles, NmaxGuess, XmaxGuess, X0Guess, lambGuess, calcChi2=True, shiftDepths=False)
-#RFit, RFitSigma, LFit, LFitSigma, XmaxFit, XmaxSigma, NmaxFit, X0Fit, lambFit, NmaxSigma, X0Sigma, lambSigma = FitLongitudinalProfile(depths, chargedParticles, NmaxGuess, XmaxGuess, X0Guess, lambGuess, calcChi2=False, shiftDepths=False)
-
 XVals = np.asarray(depths)
 if args.emParticles == True:
     NVals = totalEM
@@ -388,8 +387,7 @@ if args.compareCONEX == True:
 
     chargedParticlesOG, depthsOG = remove_zeros(chargedParticlesOG, depthsOG)
 
-    # Remove the last point in the longitudinal distributions b/c it is not physical (sometimes below ground)
-    # Agnieszka suggested removing the final two points but start with only the final point at first
+    # Remove the last two point in the longitudinal distributions b/c it is not physical
     depthsOG.pop()
     positronsOG.pop()
     electronsOG.pop()
@@ -589,6 +587,3 @@ print(f"Lambda (corsika): {lambdaApprox:.3f}")
 print(f"Lambda Fit Value: {lambFit:.3f} +/- {lambSigma:.3f}")
 print(f"Nmax (corsika): {Nmax:.3e}")
 print(f"Nmax Fit Value: {NmaxFit:.3e} +/- {NmaxSigma:.3e}")
-
-#print(f"GH Chi-Sq.: {GHChisq:.3f}, GH Red. Chi-Sq.: {GHReducedChisq:.3f}")
-#print(f"And. Chi-Sq.: {AndringaChisq:.3f}, And. Red. Chi-Sq.: {AndringaReducedChisq:.3f}")
