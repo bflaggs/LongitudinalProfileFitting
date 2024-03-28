@@ -123,37 +123,9 @@ class EventProfileFit(object):
         self.sigmaLfit = None
         self.sigmaXmaxfit = None
 
-        self.RfitShift = None
-        self.LfitShift = None
-        self.XmaxfitShift = None
-        self.sigmaRfitShift = None
-        self.sigmaLfitShift = None
-        self.sigmaXmaxfitShift = None
-
-        self.RfitAbs = None
-        self.LfitAbs = None
-        self.XmaxfitAbs = None
-        self.sigmaRfitAbs = None
-        self.sigmaLfitAbs = None
-        self.sigmaXmaxfitAbs = None
-
         self.RfitAndringa = None
         self.LfitAndringa = None
         self.XmaxfitAndringa = None
         self.sigmaRfitAndringa = None
         self.sigmaLfitAndringa = None
         self.sigmaXmaxfitAndringa = None
-
-        self.RfitAndringaShift = None
-        self.LfitAndringaShift = None
-        self.XmaxfitAndringaShift = None
-        self.sigmaRfitAndringaShift = None
-        self.sigmaLfitAndringaShift = None
-        self.sigmaXmaxfitAndringaShift = None
-
-        self.RfitAndringaAbs = None
-        self.LfitAndringaAbs = None
-        self.XmaxfitAndringaAbs = None
-        self.sigmaRfitAndringaAbs = None
-        self.sigmaLfitAndringaAbs = None
-        self.sigmaXmaxfitAndringaAbs = None
