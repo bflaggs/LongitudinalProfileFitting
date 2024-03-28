@@ -23,36 +23,23 @@ from .PlottingTools import qualitative_colors
 class MultivariateMassAnalysis(object):
 
     allObservables = [r"$X_{\rm max}$ (g/cm$^2$)",
-                      r"lg(N$_{\mu}$)", r"R$_{{\rm e, max}/\mu}$", r"R$_{{\rm e}/\mu}$",
-                      r"lg(N$_{\mu}$) E>500GeV", r"R$_{{\rm e, max}/\mu}$ E>500GeV", r"R$_{{\rm e}/\mu}$ E>500GeV",
-                      r"lg(N$_{\mu}$) 800m", r"R$_{{\rm e, max}/\mu}$ 800m", r"R$_{{\rm e}/\mu}$ 800m",
                       r"lg(N$_{{\rm e, max}}$)", r"lg(N$_{{\rm e}}$)", "R", r"L (g/cm$^2$)"]
 
     allObservablesNoScaling = [r"$X_{\rm max, true}$ (g/cm$^2$)",
-                               r"lg(N$_{\mu, {\rm true}}$)", r"R$_{{\rm e, max}/\mu, {\rm true}}$", r"R$_{{\rm e}/\mu, {\rm true}}$",
-                               r"lg(N$_{\mu, {\rm true}}$) E>500GeV", r"R$_{{\rm e, max}/\mu, {\rm true}}$ E>500GeV", r"R$_{{\rm e}/\mu, {\rm true}}$ E>500GeV",
-                               r"lg(N$_{\mu, {\rm true}}$) 800m", r"R$_{{\rm e, max}/\mu, {\rm true}}$ 800m", r"R$_{{\rm e}/\mu, {\rm true}}$ 800m",
                                r"lg(N$_{{\rm e, max}}$)", r"lg(N$_{{\rm e, true}}$)", r"R$_{\rm true}$", r"L$_{\rm true}$ (g/cm$^2$)"]
 
     allPlottingNames = ["Xmax",
-                        "nMuTotal", "RatioEMnMuTotal", "RatioEMObslevnMuTotal",
-                        "nMuHighE", "RatioEMnMuHighE", "RatioEMObslevnMuHighE",
-                        "nMu800m", "RatioEMnMu800m", "RatioEMObslevnMu800m",
                         "nEM", "nEMObslev", "Rval", "Lval"]
 
     # If color is "#555555" then this color needs to be updated in the future...
     observableColors = ["#88CCEE",
-                        "#555555", "#555555", "#555555",
-                        "#DDCC77", "#555555", "#CC6677",
-                        "#999933", "#555555", "#661100",
                         "#555555", "#555555", "#117733", "#44AA99"]
 
 
     def __init__(self, minDeg=0, maxDeg=72, muonScaling=0.0, highEmuonScaling=0.0, minLgE=16, maxLgE=18.5,
-                 includeXmax=False, includeMuObsLev=False, includeMuhighE=False, includeMu800m=False,
-                 includeEMratio=False, includeEMxmax=False, includeEMObslev=False,
+                 includeXmax=False, includeEMxmax=False, includeEMObslev=False,
                  includeRval=False, includeLval=False, useGHFits=False, useCorsikaXmax=False,
-                 first10rings=False, last10rings=False, allfourPrimaries=False,
+                 allfourPrimaries=False,
                  protonAndHelium=False, heliumAndOxygen=False, applyScaling=True, applyDataCuts=False,
                  observatory="IceCube", useLargerSmearValues=False, singleObservable=False, smearVal=0.0): 
 
@@ -69,15 +56,9 @@ class MultivariateMassAnalysis(object):
         if allfourPrimaries + protonAndHelium + heliumAndOxygen > 1:
             raise ValueError("Only one keyword specifying primary particle types can be set to True.")
 
-        if first10rings + last10rings > 1:
-            raise ValueError("Only one set of muon/electron rings can be set to True.")
-
         if muonScaling == 0 or highEmuonScaling == 0:
             print("Warning: Only one muon scaling factor is set.")
             #raise ValueError("Must set both muon scaling factors (even if only using one type).")
-
-        if first10rings == True or last10rings == True:
-            print("Warning: Performing analysis for muon/electron rings only!")
 
         if applyScaling == False:
             print("Warning: The muon observables will not be scaled according to the Heitler-Matthews model!")
@@ -97,18 +78,12 @@ class MultivariateMassAnalysis(object):
         self.maxDeg = maxDeg
         self.maxZen = self.ZenithScaling(self.maxDeg / 180.0 * np.pi)
 
-        self.flagMuTot = includeMuObsLev
-        self.flagMuhighE = includeMuhighE
-        self.flagMu800m = includeMu800m
-        self.flagEMratio = includeEMratio
         self.flagEMxmax = includeEMxmax
         self.flagEMObslev = includeEMObslev
         self.flagRval = includeRval
         self.flagLval = includeLval
         self.flagGHFits = useGHFits
         self.flagCorsikaXmax = useCorsikaXmax
-        self.flagin500m = first10rings
-        self.flagin1000m = last10rings
 
         self.flagAllPrimaries = allfourPrimaries
         self.flagProtonHelium = protonAndHelium
@@ -134,56 +109,28 @@ class MultivariateMassAnalysis(object):
             self.primaryColors = qualitative_colors(4)[::-3]
 
 
-        if includeEMratio == False and includeEMxmax == True and includeEMObslev == True:
-            electronNumberXmax = True
-            electronNumberObslev = True
-        elif includeEMratio == False and includeEMxmax == True and includeEMObslev == False:
-            electronNumberXmax = True
-            electronNumberObslev = False
-        elif includeEMratio == False and includeEMxmax == False and includeEMObslev == True:
-            electronNumberXmax = False
-            electronNumberObslev = True
-        else:
-            electronNumberXmax = False
-            electronNumberObslev = False
-
         if self.flagSingleObservable == True:
             self.smearVal = smearVal
             print("Warning: Only one observable will be used in the analysis. If making contour/projection plots an error will occur!")
 
-            if includeEMratio == True:
-                self.flagMuTot = False
-                self.flagMuhighE = False
-                self.flagMu800m = False
 
         self.kwObservables = [includeXmax,
-                              self.flagMuTot, includeMuObsLev+includeEMratio+includeEMxmax == 3, includeMuObsLev+includeEMratio+includeEMObslev == 3,
-                              self.flagMuhighE, includeMuhighE+includeEMratio+includeEMxmax == 3, includeMuhighE+includeEMratio+includeEMObslev == 3,
-                              self.flagMu800m, includeMu800m+includeEMratio+includeEMxmax == 3, includeMu800m+includeEMratio+includeEMObslev == 3,
-                              electronNumberXmax, electronNumberObslev, includeRval, includeLval]
+                              includeEMxmax, includeEMObslev, includeRval, includeLval]
 
-        if self.flagin500m == True:
-            self.params = ["0m-50m","50m-100m","100m-150m","150m-200m","200m-250m","250m-300m","300m-350m","350m-400m","400m-450m","450m-500m"]
-            self.colors = qualitative_colors(12)[1:11]
-        elif self.flagin1000m == True:
-            self.params = ["500m-550m","550m-600m","600m-650m","650m-700m","700m-750m","750m-800m","800m-850m","850m-900m","900m-950m","950m-1000m"]
-            self.colors = qualitative_colors(12)[1:11]
-        else:
+        self.params = []
+        self.colors = []
+        self.observableIndices = []
+        self.plotNames = []
 
-            self.params = []
-            self.colors = []
-            self.observableIndices = []
-            self.plotNames = []
-
-            for index in range(len(self.kwObservables)):
-                if self.kwObservables[index] == 1:
-                    self.colors.append(self.observableColors[index])
-                    self.observableIndices.append(index)
-                    self.plotNames.append(self.allPlottingNames[index])
-                    if self.flagScalingCorrections == True:
-                        self.params.append(self.allObservables[index])
-                    else:
-                        self.params.append(self.allObservablesNoScaling[index])
+        for index in range(len(self.kwObservables)):
+            if self.kwObservables[index] == 1:
+                self.colors.append(self.observableColors[index])
+                self.observableIndices.append(index)
+                self.plotNames.append(self.allPlottingNames[index])
+                if self.flagScalingCorrections == True:
+                    self.params.append(self.allObservables[index])
+                else:
+                    self.params.append(self.allObservablesNoScaling[index])
 
         if len(self.params) == 0:
             raise ValueError("No observables were included in the analysis with this use of keywords. Try again with a different combination.")
@@ -342,19 +289,6 @@ class MultivariateMassAnalysis(object):
             if not 0 < event.xmax < 1500:
                 continue
 
-            if self.observatoryName == "IceCube":
-                if event.n500GeVMuObslev < 1:
-                    if not self.warn500:
-                        print("Warning: found an event without a 500 GeV muon")
-                    self.warn500 = True
-                    continue
-
-            if event.nMuonsObslev < 1:
-                if not self.warnMuAll:
-                    print("Warning: found an event without any muons")
-                self.warnMuAll = True
-                continue
-
             # Apply data cuts if keyword provided...
             if (self.flagDataCuts == True) and (self.flagGHFits == True):
                 if event.sigmaXmaxfit == np.inf or event.sigmaRfit == np.inf or event.sigmaLfit == np.inf:
@@ -382,127 +316,21 @@ class MultivariateMassAnalysis(object):
 
             energy = event.energy
 
-            nMu50mRing = event.nMu50m
-            nMu100mRing = event.nMu100m - event.nMu50m
-            nMu150mRing = event.nMu150m - event.nMu100m
-            nMu200mRing = event.nMu200m - event.nMu150m
-            nMu250mRing = event.nMu250m - event.nMu200m
-            nMu300mRing = event.nMu300m - event.nMu250m
-            nMu350mRing = event.nMu350m - event.nMu300m
-            nMu400mRing = event.nMu400m - event.nMu350m
-            nMu450mRing = event.nMu450m - event.nMu400m
-            nMu500mRing = event.nMu500m - event.nMu450m
-            nMu550mRing = event.nMu550m - event.nMu500m
-            nMu600mRing = event.nMu600m - event.nMu550m
-            nMu650mRing = event.nMu650m - event.nMu600m
-            nMu700mRing = event.nMu700m - event.nMu650m
-            nMu750mRing = event.nMu750m - event.nMu700m
-            nMu800mRing = event.nMu800m - event.nMu750m
-            nMu850mRing = event.nMu850m - event.nMu800m
-            nMu900mRing = event.nMu900m - event.nMu850m
-            nMu950mRing = event.nMu950m - event.nMu900m
-            nMu1000mRing = event.nMu1000m - event.nMu950m
-
-            nEM50mRing = event.nEM50m
-            nEM100mRing = event.nEM100m - event.nEM50m
-            nEM150mRing = event.nEM150m - event.nEM100m
-            nEM200mRing = event.nEM200m - event.nEM150m
-            nEM250mRing = event.nEM250m - event.nEM200m
-            nEM300mRing = event.nEM300m - event.nEM250m
-            nEM350mRing = event.nEM350m - event.nEM300m
-            nEM400mRing = event.nEM400m - event.nEM350m
-            nEM450mRing = event.nEM450m - event.nEM400m
-            nEM500mRing = event.nEM500m - event.nEM450m
-            nEM550mRing = event.nEM550m - event.nEM500m
-            nEM600mRing = event.nEM600m - event.nEM550m
-            nEM650mRing = event.nEM650m - event.nEM600m
-            nEM700mRing = event.nEM700m - event.nEM650m
-            nEM750mRing = event.nEM750m - event.nEM700m
-            nEM800mRing = event.nEM800m - event.nEM750m
-            nEM850mRing = event.nEM850m - event.nEM800m
-            nEM900mRing = event.nEM900m - event.nEM850m
-            nEM950mRing = event.nEM950m - event.nEM900m
-            nEM1000mRing = event.nEM1000m - event.nEM950m
 
             if self.flagScalingCorrections == False:
-                lgNMuTotCorr = np.log10(event.nMuonsObslev)
-                lgNMuHighCorr = np.log10(event.n500GeVMuObslev)
                 lgNEM = np.log10(event.nEmAtXmax)
-                diffLgNEMLgNMuTot = np.log10(event.nEmAtXmax) - np.log10(event.nMuonsObslev)
-                diffLgNEMLgNMuHigh = np.log10(event.nEmAtXmax) - np.log10(event.n500GeVMuObslev)
 
                 # Changed name to have "Corr" at the end to remain consistent w/ other observables, made it easier to implement in code...
                 lgNEMObslevCorr = np.log10(event.nEmObslev)
-
-                diffLgNEMObslevLgNMuTot = np.log10(event.nEmObslev) - np.log10(event.nMuonsObslev)
-                diffLgNEMObslevLgNMuHigh = np.log10(event.nEmObslev) - np.log10(event.n500GeVMuObslev)
-
-                lgNMu50mCorr = np.log10(nMu50mRing)
-                lgNMu100mCorr = np.log10(nMu100mRing)
-                lgNMu150mCorr = np.log10(nMu150mRing)
-                lgNMu200mCorr = np.log10(nMu200mRing)
-                lgNMu250mCorr = np.log10(nMu250mRing)
-                lgNMu300mCorr = np.log10(nMu300mRing)
-                lgNMu350mCorr = np.log10(nMu350mRing)
-                lgNMu400mCorr = np.log10(nMu400mRing)
-                lgNMu450mCorr = np.log10(nMu450mRing)
-                lgNMu500mCorr = np.log10(nMu500mRing)
-                lgNMu550mCorr = np.log10(nMu550mRing)
-                lgNMu600mCorr = np.log10(nMu600mRing)
-                lgNMu650mCorr = np.log10(nMu650mRing)
-                lgNMu700mCorr = np.log10(nMu700mRing)
-                lgNMu750mCorr = np.log10(nMu750mRing)
-                lgNMu800mCorr = np.log10(nMu800mRing)
-                lgNMu850mCorr = np.log10(nMu850mRing)
-                lgNMu900mCorr = np.log10(nMu900mRing)
-                lgNMu950mCorr = np.log10(nMu950mRing)
-                lgNMu1000mCorr = np.log10(nMu1000mRing)
-
-                # Take 800-850m ring as nominal, partially motivated by muon density paper (arxiv: 2201.12635)
-                diffLgNEMLgNMu850m = np.log10(event.nEmAtXmax) - np.log10(nMu850mRing)
-                diffLgNEMObslevLgNMu850m = np.log10(nEM850mRing) - np.log10(nMu850mRing)  # Using electron number at ground in ring (original used total EM at ground)
 
             else:
                 if self.muonEnergyScaling == 0.94 and self.highEmuonEnergyScaling == 0.82:
                     if self.observatoryName == "Auger":
                         raise ValueError("This scaling has not been optimized for the Auger observatory. Repeat scaling steps for Auger and then update code to continue.")
 
-                    lgNMuTotCorr = np.log10(event.nMuonsObslev / (energy * 1e-9) ** self.muonEnergyScaling)
-                    lgNMuHighCorr = np.log10(event.n500GeVMuObslev / (energy * 1e-9) ** self.highEmuonEnergyScaling)
-
                     lgNEM = np.log10(event.nEmAtXmax / (energy * 1e-9) ** 1.01)
-                    diffLgNEMLgNMuTot = np.log10(event.nEmAtXmax) - np.log10(event.nMuonsObslev) - 0.07*np.log10(energy * 1e-9)
-                    diffLgNEMLgNMuHigh = np.log10(event.nEmAtXmax) - np.log10(event.n500GeVMuObslev) - 0.18*np.log10(energy * 1e-9)
 
                     lgNEMObslev = np.log10(event.nEmObslev / (energy * 1e-9) ** 1.15)
-                    diffLgNEMObslevLgNMuTot = np.log10(event.nEmObslev) - np.log10(event.nMuonsObslev) - 0.21*np.log10(energy * 1e-9)
-                    diffLgNEMObslevLgNMuHigh = np.log10(event.nEmObslev) - np.log10(event.n500GeVMuObslev) - 0.32*np.log10(energy * 1e-9)
-
-                    lgNMu50mCorr = np.log10(nMu50mRing / (energy * 1e-9) ** self.muonEnergyScaling)
-                    lgNMu100mCorr = np.log10(nMu100mRing / (energy * 1e-9) ** self.muonEnergyScaling)
-                    lgNMu150mCorr = np.log10(nMu150mRing / (energy * 1e-9) ** self.muonEnergyScaling)
-                    lgNMu200mCorr = np.log10(nMu200mRing / (energy * 1e-9) ** self.muonEnergyScaling)
-                    lgNMu250mCorr = np.log10(nMu250mRing / (energy * 1e-9) ** self.muonEnergyScaling)
-                    lgNMu300mCorr = np.log10(nMu300mRing / (energy * 1e-9) ** self.muonEnergyScaling)
-                    lgNMu350mCorr = np.log10(nMu350mRing / (energy * 1e-9) ** self.muonEnergyScaling)
-                    lgNMu400mCorr = np.log10(nMu400mRing / (energy * 1e-9) ** self.muonEnergyScaling)
-                    lgNMu450mCorr = np.log10(nMu450mRing / (energy * 1e-9) ** self.muonEnergyScaling)
-                    lgNMu500mCorr = np.log10(nMu500mRing / (energy * 1e-9) ** self.muonEnergyScaling)
-                    lgNMu550mCorr = np.log10(nMu550mRing / (energy * 1e-9) ** self.muonEnergyScaling)
-                    lgNMu600mCorr = np.log10(nMu600mRing / (energy * 1e-9) ** self.muonEnergyScaling)
-                    lgNMu650mCorr = np.log10(nMu650mRing / (energy * 1e-9) ** self.muonEnergyScaling)
-                    lgNMu700mCorr = np.log10(nMu700mRing / (energy * 1e-9) ** self.muonEnergyScaling)
-                    lgNMu750mCorr = np.log10(nMu750mRing / (energy * 1e-9) ** self.muonEnergyScaling)
-                    lgNMu800mCorr = np.log10(nMu800mRing / (energy * 1e-9) ** self.muonEnergyScaling)
-                    lgNMu850mCorr = np.log10(nMu850mRing / (energy * 1e-9) ** self.muonEnergyScaling)
-                    lgNMu900mCorr = np.log10(nMu900mRing / (energy * 1e-9) ** self.muonEnergyScaling)
-                    lgNMu950mCorr = np.log10(nMu950mRing / (energy * 1e-9) ** self.muonEnergyScaling)
-                    lgNMu1000mCorr = np.log10(nMu1000mRing / (energy * 1e-9) ** self.muonEnergyScaling)
-
-                    # Take 800-850m ring as nominal, partially motivated by muon density paper (arxiv: 2201.12635)
-                    diffLgNEMLgNMu850m = np.log10(event.nEmAtXmax) - np.log10(nMu850mRing) - 0.07*np.log10(energy * 1e-9)
-                    diffLgNEMObslevLgNMu850m = np.log10(nEM850mRing) - np.log10(nMu850mRing) - 0.21*np.log10(energy * 1e-9)
-
 
                 elif self.muonEnergyScaling == 0.93 and self.highEmuonEnergyScaling == 0.82:
                     # For these parameters then scale w.r.t. the electron number at Xmax
@@ -513,50 +341,12 @@ class MultivariateMassAnalysis(object):
                         scaleCorrection = 0.01 # Correction between lg(Ne) vs. lg(E) plot
                         EeVnEMNormalization = 586908936.4969574 # zen = 0-65 deg (Auger, all zenith angles), lgE = 17.9-18.1
 
-                    lgNMuTotCorr = np.log10(event.nMuonsObslev / (event.nEmAtXmax / EeVnEMNormalization) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMuHighCorr = np.log10(event.n500GeVMuObslev / (event.nEmAtXmax / EeVnEMNormalization) ** (self.highEmuonEnergyScaling + scaleCorrection))
-
                     lgNEM = np.log10(event.nEmAtXmax)
-                    diffLgNEMLgNMuTot = np.log10(event.nEmAtXmax) - np.log10(event.nMuonsObslev) - (0.07 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
-                    diffLgNEMLgNMuHigh = np.log10(event.nEmAtXmax) - np.log10(event.n500GeVMuObslev) - (0.18 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
 
                     if self.observatoryName == "IceCube":
-                        diffLgNEMObslevLgNMuTot = np.log10(event.nEmObslev) - np.log10(event.nMuonsObslev) - (0.20 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
                         lgNEMObslevCorr = np.log10(event.nEmObslev / (event.nEmAtXmax / EeVnEMNormalization) ** (1.13 + scaleCorrection))
                     elif self.observatoryName == "Auger":
-                        diffLgNEMObslevLgNMuTot = np.log10(event.nEmObslev) - np.log10(event.nMuonsObslev) - (0.23 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
                         lgNEMObslevCorr = np.log10(event.nEmObslev / (event.nEmAtXmax / EeVnEMNormalization) ** (1.16 + scaleCorrection))
-
-                    diffLgNEMObslevLgNMuHigh = np.log10(event.nEmObslev) - np.log10(event.n500GeVMuObslev) - (0.31 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
-
-                    lgNMu50mCorr = np.log10(nMu50mRing / (event.nEmAtXmax / EeVnEMNormalization) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu100mCorr = np.log10(nMu100mRing / (event.nEmAtXmax / EeVnEMNormalization) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu150mCorr = np.log10(nMu150mRing / (event.nEmAtXmax / EeVnEMNormalization) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu200mCorr = np.log10(nMu200mRing / (event.nEmAtXmax / EeVnEMNormalization) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu250mCorr = np.log10(nMu250mRing / (event.nEmAtXmax / EeVnEMNormalization) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu300mCorr = np.log10(nMu300mRing / (event.nEmAtXmax / EeVnEMNormalization) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu350mCorr = np.log10(nMu350mRing / (event.nEmAtXmax / EeVnEMNormalization) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu400mCorr = np.log10(nMu400mRing / (event.nEmAtXmax / EeVnEMNormalization) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu450mCorr = np.log10(nMu450mRing / (event.nEmAtXmax / EeVnEMNormalization) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu500mCorr = np.log10(nMu500mRing / (event.nEmAtXmax / EeVnEMNormalization) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu550mCorr = np.log10(nMu550mRing / (event.nEmAtXmax / EeVnEMNormalization) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu600mCorr = np.log10(nMu600mRing / (event.nEmAtXmax / EeVnEMNormalization) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu650mCorr = np.log10(nMu650mRing / (event.nEmAtXmax / EeVnEMNormalization) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu700mCorr = np.log10(nMu700mRing / (event.nEmAtXmax / EeVnEMNormalization) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu750mCorr = np.log10(nMu750mRing / (event.nEmAtXmax / EeVnEMNormalization) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu800mCorr = np.log10(nMu800mRing / (event.nEmAtXmax / EeVnEMNormalization) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu850mCorr = np.log10(nMu850mRing / (event.nEmAtXmax / EeVnEMNormalization) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu900mCorr = np.log10(nMu900mRing / (event.nEmAtXmax / EeVnEMNormalization) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu950mCorr = np.log10(nMu950mRing / (event.nEmAtXmax / EeVnEMNormalization) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu1000mCorr = np.log10(nMu1000mRing / (event.nEmAtXmax / EeVnEMNormalization) ** (self.muonEnergyScaling + scaleCorrection))
-
-                    # Take 800-850m ring as nominal, partially motivated by muon density paper (arxiv: 2201.12635)
-                    diffLgNEMLgNMu850m = np.log10(event.nEmAtXmax) - np.log10(nMu850mRing) - (0.07 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
-
-                    if self.observatoryName == "IceCube":
-                        diffLgNEMObslevLgNMu850m = np.log10(nEM850mRing) - np.log10(nMu850mRing) - (0.09 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
-                    elif self.observatoryName == "Auger":
-                        diffLgNEMObslevLgNMu850m = np.log10(nEM850mRing) - np.log10(nMu850mRing) - (0.11 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
 
 
                 elif self.muonEnergyScaling == 0.81 and self.highEmuonEnergyScaling == 0.72:
@@ -569,41 +359,9 @@ class MultivariateMassAnalysis(object):
                     scaleCorrection = 0.15 # Correction between lg(Ne) at Ground vs. lg(E) plot
                     #scaleCorrection = 0.01 # Correction to make it so everything scales correctly vs. energy (not sure why this value works...)
 
-                    lgNMuTotCorr = np.log10(event.nMuonsObslev / (event.nEmObslev) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMuHighCorr = np.log10(event.n500GeVMuObslev / (event.nEmObslev) ** (self.highEmuonEnergyScaling + scaleCorrection))
-                    
                     lgNEM = np.log10(event.nEmAtXmax / (event.nEmObslev) ** (0.87 + scaleCorrection))
-                    diffLgNEMLgNMuTot = np.log10(event.nEmAtXmax) - np.log10(event.nMuonsObslev) - (0.06 + scaleCorrection)*np.log10(event.nEmObslev)
-                    diffLgNEMLgNMuHigh = np.log10(event.nEmAtXmax) - np.log10(event.n500GeVMuObslev) - (0.16 + scaleCorrection)*np.log10(event.nEmObslev)
 
                     lgNEMObslev = np.log10(event.nEmObslev / (event.nEmObslev) ** (0.99 + scaleCorrection))
-                    diffLgNEMObslevLgNMuTot = np.log10(event.nEmObslev) - np.log10(event.nMuonsObslev) - (0.18 + scaleCorrection)*np.log10(event.nEmObslev)
-                    diffLgNEMObslevLgNMuHigh = np.log10(event.nEmObslev) - np.log10(event.n500GeVMuObslev) - (0.27 + scaleCorrection)*np.log10(event.nEmObslev)
-
-                    lgNMu50mCorr = np.log10(nMu50mRing / (event.nEmObslev) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu100mCorr = np.log10(nMu100mRing / (event.nEmObslev) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu150mCorr = np.log10(nMu150mRing / (event.nEmObslev) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu200mCorr = np.log10(nMu200mRing / (event.nEmObslev) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu250mCorr = np.log10(nMu250mRing / (event.nEmObslev) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu300mCorr = np.log10(nMu300mRing / (event.nEmObslev) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu350mCorr = np.log10(nMu350mRing / (event.nEmObslev) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu400mCorr = np.log10(nMu400mRing / (event.nEmObslev) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu450mCorr = np.log10(nMu450mRing / (event.nEmObslev) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu500mCorr = np.log10(nMu500mRing / (event.nEmObslev) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu550mCorr = np.log10(nMu550mRing / (event.nEmObslev) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu600mCorr = np.log10(nMu600mRing / (event.nEmObslev) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu650mCorr = np.log10(nMu650mRing / (event.nEmObslev) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu700mCorr = np.log10(nMu700mRing / (event.nEmObslev) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu750mCorr = np.log10(nMu750mRing / (event.nEmObslev) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu800mCorr = np.log10(nMu800mRing / (event.nEmObslev) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu850mCorr = np.log10(nMu850mRing / (event.nEmObslev) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu900mCorr = np.log10(nMu900mRing / (event.nEmObslev) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu950mCorr = np.log10(nMu950mRing / (event.nEmObslev) ** (self.muonEnergyScaling + scaleCorrection))
-                    lgNMu1000mCorr = np.log10(nMu1000mRing / (event.nEmObslev) ** (self.muonEnergyScaling + scaleCorrection))
-
-                    # Take 800-850m ring as nominal, partially motivated by muon density paper (arxiv: 2201.12635)
-                    diffLgNEMLgNMu850m = np.log10(event.nEmAtXmax) - np.log10(nMu850mRing) - (0.06 + scaleCorrection)*np.log10(event.nEmObslev)
-                    diffLgNEMObslevLgNMu850m = np.log10(nEM850mRing) - np.log10(nMu850mRing) - (0.18 + scaleCorrection)*np.log10(event.nEmObslev)
 
                 else:
                     raise ValueError("Not a valid combination of muon energy scaling factors...")
@@ -642,19 +400,11 @@ class MultivariateMassAnalysis(object):
                         if XmaxvalCorr == np.nan or XmaxvalCorr == np.inf:
                             print(f"Bad value found! With Xmax={event.XmaxfitAndringa}, EMatXmax={event.nEmAtXmax}")
 
-            if self.flagin500m:
-                vals = [lgNMu50mCorr, lgNMu100mCorr, lgNMu150mCorr, lgNMu200mCorr, lgNMu250mCorr, lgNMu300mCorr, lgNMu350mCorr, lgNMu400mCorr, lgNMu450mCorr, lgNMu500mCorr]
-            elif self.flagin1000m:
-                vals = [lgNMu550mCorr, lgNMu600mCorr, lgNMu650mCorr, lgNMu700mCorr, lgNMu750mCorr, lgNMu800mCorr, lgNMu850mCorr, lgNMu900mCorr, lgNMu950mCorr, lgNMu1000mCorr]
-            else:
 
-                allValues = [XmaxvalCorr,
-                             lgNMuTotCorr, diffLgNEMLgNMuTot, diffLgNEMObslevLgNMuTot,
-                             lgNMuHighCorr, diffLgNEMLgNMuHigh, diffLgNEMObslevLgNMuHigh,
-                             lgNMu850mCorr, diffLgNEMLgNMu850m, diffLgNEMObslevLgNMu850m,
-                             lgNEM, lgNEMObslevCorr, RvalCorr, LvalCorr]
+            allValues = [XmaxvalCorr,
+                         lgNEM, lgNEMObslevCorr, RvalCorr, LvalCorr]
 
-                vals = [allValues[ind] for ind in self.observableIndices]
+            vals = [allValues[ind] for ind in self.observableIndices]
 
             if len(vals) == 0:
                 raise ValueError("No observables were included in the analysis with this use of keywords. Try again with a different combination.")
@@ -684,45 +434,18 @@ class MultivariateMassAnalysis(object):
         elif self.flagLargeSmearUncerts == True:
             if self.muonEnergyScaling == 0.94 and self.highEmuonEnergyScaling == 0.82:
                 XmaxSmear = 40.0
-                lowEMuTotSmear = 0.2
-                highEMuSmear = 0.14
-                lowEMu800Smear = 0.2
-                RatioEMNMuTot = 0.22
-                RatioEMNMuHigh = 0.18
-                RatioEMNMu850m = 0.22
-                RatioEMObslevNMuTot = 0.28
-                RatioEMObslevNMuHigh = 0.24
-                RatioEMObslevNMu850m = 0.28
                 EMXmaxSmear = 0.1
                 EMObslevSmear = 0.2
                 RSmear = 0.1  # double uncertainty from arxiv: 1811.04660
                 LSmear = 10.0  # in arxiv: 1811.04660 list uncertainty as 7.3+0.9 add in quad
             elif self.muonEnergyScaling == 0.93 and self.highEmuonEnergyScaling == 0.82:
                 XmaxSmear = 40.0
-                lowEMuTotSmear = 0.2  # ~21-26% uncertainty in raw value
-                highEMuSmear = 0.14  # ~15-18% uncertainty in raw value
-                lowEMu800Smear = 0.2  # ~21-26% uncertainty in raw value
-                RatioEMNMuTot = 0.22
-                RatioEMNMuHigh = 0.18
-                RatioEMNMu850m = 0.22
-                RatioEMObslevNMuTot = 0.28  # ~28-38% uncertainty in raw value
-                RatioEMObslevNMuHigh = 0.24  # ~24-32% uncertainty in raw value
-                RatioEMObslevNMu850m = 0.28  # ~28-38% uncertainty in raw value
                 EMXmaxSmear = 0.1  # This is smearing lgNe,max not Ne,max --> sigma of Ne,max is 0.1 so sigma of lgNe,max is ~0.045
                 EMObslevSmear = 0.2  # ~21-26% uncertainty in raw value
                 RSmear = 0.1  # double uncertainty from arxiv: 1811.04660
                 LSmear = 10.0  # in arxiv: 1811.04660 list uncertainty as 7.3+0.9 add in quad
             elif self.muonEnergyScaling == 0.81 and self.highEmuonEnergyScaling == 0.72:                
                 XmaxSmear = 40.0
-                lowEMuTotSmear = 0.2
-                highEMuSmear = 0.14
-                lowEMu800Smear = 0.2
-                RatioEMNMuTot = 0.22  # UPDATE
-                RatioEMNMuHigh = 0.18  # UPDATE
-                RatioEMNMu850m = 0.22  # UPDATE
-                RatioEMObslevNMuTot = 0  # UPDATE
-                RatioEMObslevNMuHigh = 0  # UPDATE
-                RatioEMObslevNMu850m = 0  # UPDATE
                 EMXmaxSmear = 0.1
                 EMObslevSmear = 0.2
                 RSmear = 0.1  # double uncertainty from arxiv: 1811.04660
@@ -732,45 +455,18 @@ class MultivariateMassAnalysis(object):
         else:
             if self.muonEnergyScaling == 0.94 and self.highEmuonEnergyScaling == 0.82:
                 XmaxSmear = 20.0
-                lowEMuTotSmear = 0.1
-                highEMuSmear = 0.07
-                lowEMu800Smear = 0.1
-                RatioEMNMuTot = 0.11
-                RatioEMNMuHigh = 0.09
-                RatioEMNMu850m = 0.11
-                RatioEMObslevNMuTot = 0.14
-                RatioEMObslevNMuHigh = 0.12
-                RatioEMObslevNMu850m = 0.14
                 EMXmaxSmear = 0.05
                 EMObslevSmear = 0.1
                 RSmear = 0.05  # in arxiv: 1811.04660 list uncertainty as 0.04+0.012 add in quad
                 LSmear = 5.0  # half of uncertainty from arxiv: 1811.04660
             elif self.muonEnergyScaling == 0.93 and self.highEmuonEnergyScaling == 0.82:
                 XmaxSmear = 20.0
-                lowEMuTotSmear = 0.1  # ~21-26% uncertainty in raw value
-                highEMuSmear = 0.07  # ~15-18% uncertainty in raw value
-                lowEMu800Smear = 0.1  # ~21-26% uncertainty in raw value
-                RatioEMNMuTot = 0.11
-                RatioEMNMuHigh = 0.09
-                RatioEMNMu850m = 0.11
-                RatioEMObslevNMuTot = 0.14  # ~28-38% uncertainty in raw value
-                RatioEMObslevNMuHigh = 0.12  # ~24-32% uncertainty in raw value
-                RatioEMObslevNMu850m = 0.14  # ~28-38% uncertainty in raw value
                 EMXmaxSmear = 0.05  # This is smearing lgNe,max not Ne,max --> sigma of Ne,max is 0.1 so sigma of lgNe,max is ~0.045
                 EMObslevSmear = 0.1  # ~21-26% uncertainty in raw value
                 RSmear = 0.05  # in arxiv: 1811.04660 list uncertainty as 0.04+0.012 add in quad
                 LSmear = 5.0  # half of uncertainty from arxiv: 1811.04660
             elif self.muonEnergyScaling == 0.81 and self.highEmuonEnergyScaling == 0.72:                
                 XmaxSmear = 20.0
-                lowEMuTotSmear = 0.1
-                highEMuSmear = 0.07
-                lowEMu800Smear = 0.1
-                RatioEMNMuTot = 0.11  # UPDATE
-                RatioEMNMuHigh = 0.09  # UPDATE
-                RatioEMNMu850m = 0.11  # UPDATE
-                RatioEMObslevNMuTot = 0  # UPDATE
-                RatioEMObslevNMuHigh = 0  # UPDATE
-                RatioEMObslevNMu850m = 0  # UPDATE
                 EMXmaxSmear = 0.05
                 EMObslevSmear = 0.1
                 RSmear = 0.05  # in arxiv: 1811.04660 list uncertainty as 0.04+0.012 add in quad
@@ -779,29 +475,7 @@ class MultivariateMassAnalysis(object):
                 raise ValueError("Not a valid combination of muon energy scaling factors...")
 
 
-        if self.flagin500m:
-            vals[0] += stats.norm.rvs(loc=0.0, scale=0.1) #lowEMu (0m-50m)
-            vals[1] += stats.norm.rvs(loc=0.0, scale=0.1) #lowEMu (50m-100m)
-            vals[2] += stats.norm.rvs(loc=0.0, scale=0.1) #lowEMu (100m-150m)
-            vals[3] += stats.norm.rvs(loc=0.0, scale=0.1) #lowEMu (150m-200m)
-            vals[4] += stats.norm.rvs(loc=0.0, scale=0.1) #lowEMu (200m-250m)
-            vals[5] += stats.norm.rvs(loc=0.0, scale=0.1) #lowEMu (250m-300m)
-            vals[6] += stats.norm.rvs(loc=0.0, scale=0.1) #lowEMu (300m-350m)
-            vals[7] += stats.norm.rvs(loc=0.0, scale=0.1) #lowEMu (350m-400m)
-            vals[8] += stats.norm.rvs(loc=0.0, scale=0.1) #lowEMu (400m-450m)
-            vals[9] += stats.norm.rvs(loc=0.0, scale=0.1) #lowEMu (450m-500m)
-        elif self.flagin1000m:
-            vals[0] += stats.norm.rvs(loc=0.0, scale=0.1) #lowEMu (500m-550m)
-            vals[1] += stats.norm.rvs(loc=0.0, scale=0.1) #lowEMu (550m-600m)
-            vals[2] += stats.norm.rvs(loc=0.0, scale=0.1) #lowEMu (600m-650m)
-            vals[3] += stats.norm.rvs(loc=0.0, scale=0.1) #lowEMu (650m-700m)
-            vals[4] += stats.norm.rvs(loc=0.0, scale=0.1) #lowEMu (700m-750m)
-            vals[5] += stats.norm.rvs(loc=0.0, scale=0.1) #lowEMu (750m-800m)
-            vals[6] += stats.norm.rvs(loc=0.0, scale=0.1) #lowEMu (800m-850m)
-            vals[7] += stats.norm.rvs(loc=0.0, scale=0.1) #lowEMu (850m-900m)
-            vals[8] += stats.norm.rvs(loc=0.0, scale=0.1) #lowEMu (900m-950m)
-            vals[9] += stats.norm.rvs(loc=0.0, scale=0.1) #lowEMu (950m-1000m)
-        elif self.flagSingleObservable:
+        if self.flagSingleObservable:
             vals[0] += stats.norm.rvs(loc=0.0, scale=self.smearVal)
         else:
 
@@ -948,37 +622,13 @@ class MultivariateMassAnalysis(object):
                 elif self.observatoryName == "Auger":
                     ax.text(0.40, 0.93, "Auger", transform=ax.transAxes, fontsize=18)
 
-                if yName == "nEM" and xName == "nMuHighE":
-                    ax.text(0.03, 0.93, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
-                elif yName == "RatioEMnMuHighE" and xName == "Xmax":
-                    ax.text(0.03, 0.93, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
-                elif yName == "nMuHighE" and xName == "Xmax":
-                    ax.text(0.03, 0.11, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
-                    ax.text(0.03, 0.04, r"E = $10^{16.5}-10^{16.9}$ eV", transform=ax.transAxes, fontsize=18)
-                    if self.flagScalingCorrections == False:
-                        ax.text(0.31, 0.87, "(Before Scaling)", transform=ax.transAxes, fontsize=18)
-                    else: # i.e. if self.flagScalingCorrections == True
-                        ax.text(0.33, 0.87, "(After Scaling)", transform=ax.transAxes, fontsize=18) 
-                elif yName == "RatioEMnMuHighE" and xName == "nMuHighE":
-                    ax.text(0.05, 0.05, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
-                elif yName == "nEMObslev" and xName == "nMuHighE":
-                    ax.text(0.03, 0.11, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
-                    ax.text(0.03, 0.04, r"E = $10^{16.5}-10^{16.9}$ eV", transform=ax.transAxes, fontsize=18)
-                elif yName == "RatioEMObslevnMuHighE" and xName == "Xmax":
-                    ax.text(0.48, 0.11, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
-                    #ax.text(0.03, 0.04, rf"lg(E/eV) = {self.minLgE:.1f}$-${self.maxLgE:.1f}", transform=ax.transAxes, fontsize=18)
-                    ax.text(0.48, 0.04, r"E = $10^{16.5}-10^{16.9}$ eV", transform=ax.transAxes, fontsize=18)
-                elif yName == "RatioEMObslevnMu800m" and xName == "Xmax":
-                    ax.text(0.48, 0.11, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
-                    ax.text(0.48, 0.04, r"E = $10^{16.5}-10^{16.9}$ eV", transform=ax.transAxes, fontsize=18)
-                elif yName == "nMu800m" and xName == "Xmax":
-                    ax.text(0.03, 0.11, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
-                    ax.text(0.03, 0.04, r"E = $10^{16.5}-10^{16.9}$ eV", transform=ax.transAxes, fontsize=18)
-                elif yName == "Lval" and xName == "Xmax":
-                    ax.text(0.48, 0.11, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
-                    ax.text(0.48, 0.04, r"E = $10^{16.5}-10^{16.9}$ eV", transform=ax.transAxes, fontsize=18)
-                else:
-                    print("No need to include text in plot...")                    
+                # Can add text to contour plots showing zenith and energy ranges
+                # Exclude for now as would need to do this on case-by-case basis depending on observables studied
+                #if yName == "Lval" and xName == "Xmax" and self.observatoryName == "IceCube":
+                #    ax.text(0.48, 0.11, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=18)
+                #    ax.text(0.48, 0.04, r"E = $10^{16.5}-10^{16.9}$ eV", transform=ax.transAxes, fontsize=18)
+                #else:
+                #    print("No need to include text in plot...")                    
 
                 fileToSave = fileSplit[0] + "/contours/" + fileNameString[0] + f"_Contours_{yName}_{xName}.pdf"
                 fig.savefig(fileToSave, bbox_inches="tight")
@@ -1143,19 +793,6 @@ class MultivariateMassAnalysis(object):
             if not 0 < event.xmax < 1500:
                 continue
 
-            if self.observatoryName == "IceCube":
-                if event.n500GeVMuObslev < 1:
-                    if not self.warn500:
-                        print("Warning: found an event without a 500 GeV muon")
-                    self.warn500 = True
-                    continue
-
-            if event.nMuonsObslev < 1:
-                if not self.warnMuAll:
-                    print("Warning: found an event without any muons")
-                self.warnMuAll = True
-                continue
-
             zen = event.zenith
             azi = event.azimuth
 
@@ -1272,19 +909,6 @@ class MultivariateMassAnalysis(object):
         for event in self.eventList:
 
             if not 0 < event.xmax < 1500:
-                continue
-
-            if self.observatoryName == "IceCube":
-                if event.n500GeVMuObslev < 1:
-                    if not self.warn500:
-                        print("Warning: found an event without a 500 GeV muon")
-                    self.warn500 = True
-                    continue
-
-            if event.nMuonsObslev < 1:
-                if not self.warnMuAll:
-                    print("Warning: found an event without any muons")
-                self.warnMuAll = True
                 continue
 
             zen = event.zenith
@@ -1443,21 +1067,6 @@ class MultivariateMassAnalysis(object):
                     eventsToBeCut += 1
                     continue
 
-                if self.observatoryName == "IceCube":
-                    if event.n500GeVMuObslev < 1:
-                        if not self.warn500:
-                            print("Warning: found an event without a 500 GeV muon")
-                        self.warn500 = True
-                        eventsToBeCut += 1
-                        continue
-
-                if event.nMuonsObslev < 1:
-                    if not self.warnMuAll:
-                        print("Warning: found an event without any muons")
-                    self.warnMuAll = True
-                    eventsToBeCut += 1
-                    continue
-
                 # Apply data cuts if keyword provided... (maybe put in GetValues instead?)
                 if (self.flagDataCuts == True) and (self.flagGHFits == True):
                     if event.sigmaXmaxfit == np.inf or event.sigmaRfit == np.inf or event.sigmaLfit == np.inf:
@@ -1526,21 +1135,6 @@ class MultivariateMassAnalysis(object):
 
                 # Apply cut for xmax because very large xmax values are unphysical
                 if not 0 < event.xmax < 1500:
-                    eventsToBeCut += 1
-                    continue
-
-                if self.observatoryName == "IceCube":
-                    if event.n500GeVMuObslev < 1:
-                        if not self.warn500:
-                            print("Warning: found an event without a 500 GeV muon")
-                        self.warn500 = True
-                        eventsToBeCut += 1
-                        continue
-
-                if event.nMuonsObslev < 1:
-                    if not self.warnMuAll:
-                        print("Warning: found an event without any muons")
-                    self.warnMuAll = True
                     eventsToBeCut += 1
                     continue
 
