@@ -11,12 +11,15 @@
 # ./AnalyzeShowerProfileFitResults.py PATH_TO_ASCII_FILES --kwargs
 
 # PATH_TO_ASCII_FILES for diffrent experiments:
-# IceCube -> /home/acoleman/gen2-surface/sim/mass/*.txt
-# Auger   -> /pbs/home/b/bflaggs/SimulationWork/ParsedData/SIB23c/*/FILES_TO_READ
+# IceCube (cobalts) -> /data/sim/IceCubeUpgrade/CosmicRay/Gen2Surface/sim/mass/*.txt
+# Auger   (lyon)    -> /pbs/home/b/bflaggs/SimulationWork/ParsedData/SIB23c/*/FILES_TO_READ
 
 # Possible Updates to Make:
 # 1. Add a way to make histograms of the uncertainties in the longitudinal fit parameters
 # 2. Add a way to make Xmax comparison scatter plots which plot fit Xmax vs. CORSIKA Xmax
+
+# CHECK FOR THIS UPDATES IN ~/Documents/Research/random_scripts/old_analysis_scripts
+# will definitely need to update them though...
 
 ######################
 # End of description #
