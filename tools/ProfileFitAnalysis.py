@@ -26,16 +26,19 @@ from .PlottingTools import qualitative_colors
 
 class ProfileFitAnalysis(object):
 
-    allObservables = [r"$X_{\rm max}$ (g/cm$^2$)", "R", r"L (g/cm$^2$)"]
+    allObservables = [r"$X_{\rm max}$ (g/cm$^2$)", "R", r"L (g/cm$^2$)",
+                      r"$\sigma_{X_{\rm max}}$ (g/cm$^2$)", r"$\sigma_{R}$", r"$\sigma_{L}$ (g/cm$^2$)"]
 
-    allObservablesNoScaling = [r"$X_{\rm max, true}$ (g/cm$^2$)", r"R$_{\rm true}$", r"L$_{\rm true}$ (g/cm$^2$)"]
+    allObservablesNoScaling = [r"$X_{\rm max, true}$ (g/cm$^2$)", r"R$_{\rm true}$", r"L$_{\rm true}$ (g/cm$^2$)",
+                               r"$\sigma_{X_{\rm max}}$ (g/cm$^2$)", r"$\sigma_{R}$", r"$\sigma_{L}$ (g/cm$^2$)"]
 
-    allPlottingNames = ["Xmax", "Rval", "Lval"]
+    allPlottingNames = ["Xmax", "Rval", "Lval",
+                        "SigmaXmax", "SigmaRval", "SigmaLval"]
 
 
     def __init__(self, minDeg=0, maxDeg=72, minLgE=16, maxLgE=18.5,
                  includeXmax=False,
-                 includeRval=False, includeLval=False, useGHFits=False, useCorsikaXmax=False,
+                 includeRval=False, includeLval=False, includeSigmas=False, useGHFits=False, useCorsikaXmax=False,
                  allfourPrimaries=False,
                  protonAndHelium=False, heliumAndOxygen=False, energyScaling=False, energyProxyScaling=True, applyDataCuts=False,
                  observatory="IceCube", useLargerSmearValues=False, singleObservable=False, smearVal=0.0): 
@@ -77,6 +80,7 @@ class ProfileFitAnalysis(object):
 
         self.flagRval = includeRval
         self.flagLval = includeLval
+        self.flagSigmas = includeSigmas
         self.flagGHFits = useGHFits
         self.flagCorsikaXmax = useCorsikaXmax
 
@@ -109,7 +113,8 @@ class ProfileFitAnalysis(object):
             print("Warning: Only one observable will be used in the analysis. If making contour/projection plots an error will occur!")
 
 
-        self.kwObservables = [includeXmax, includeRval, includeLval]
+        self.kwObservables = [includeXmax, includeRval, includeLval,
+                              includeSigmas, includeSigmas, includeSigmas]  # includeSigmas three times in a row, once for each observable (Xmax, R, L) 
 
         self.params = []
         self.observableIndices = []
@@ -318,8 +323,21 @@ class ProfileFitAnalysis(object):
                     Rval = event.RfitAndringa
                     Lval = event.LfitAndringa
 
+            if self.flagSigmas == True and self.flagGHFits == True:
+                sigmaXmax = event.sigmaXmaxfit
+                sigmaR = event.sigmaRfit
+                sigmaL = event.sigmaLfit
+            elif self.flagSigmas == True and self.flagGHFits == False:
+                sigmaXmax = event.sigmaXmaxfitAndringa
+                sigmaR = event.sigmaRfitAndringa
+                sigmaL = event.sigmaLfitAndringa
+            else:
+                sigmaXmax = 0.0
+                sigmaR = 0.0
+                sigmaL = 0.0
 
-            allValues = [Xmaxval, Rval, Lval]
+
+            allValues = [Xmaxval, Rval, Lval, sigmaXmax, sigmaR, sigmaL]
 
             vals = [allValues[ind] for ind in self.observableIndices]
 
