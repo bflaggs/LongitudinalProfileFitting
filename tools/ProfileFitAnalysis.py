@@ -37,10 +37,9 @@ class ProfileFitAnalysis(object):
 
 
     def __init__(self, minDeg=0, maxDeg=72, minLgE=16, maxLgE=18.5,
-                 includeXmax=False,
-                 includeRval=False, includeLval=False, includeSigmas=False, useGHFits=False, useCorsikaXmax=False,
-                 allfourPrimaries=False,
-                 protonAndHelium=False, heliumAndOxygen=False, energyScaling=False, energyProxyScaling=True, applyDataCuts=False,
+                 includeXmax=False, includeRval=False, includeLval=False,
+                 includeSigmas=False, useGHFits=False, useCorsikaXmax=False,
+                 energyScaling=False, energyProxyScaling=True, applyDataCuts=False,
                  observatory="IceCube", useLargerSmearValues=False, singleObservable=False, smearVal=0.0): 
 
         # ====================================================================== #
@@ -52,9 +51,6 @@ class ProfileFitAnalysis(object):
             # i.e. scalingType={"energy", "EMxmax", "EMobslev"}
             # This may be too ambitious to do at the moment and maybe should be put on the back-burner for now...
             raise ValueError("Observatory must be set to either IceCube or Auger location! Other observatory locations can be added but scaling would need to be redone.")
-
-        if allfourPrimaries + protonAndHelium + heliumAndOxygen > 1:
-            raise ValueError("Only one keyword specifying primary particle types can be set to True.")
 
         if energyScaling == True and energyProxyScaling == True:
             raise ValueError("Can only energy correct observables using a single method. Either directly using MC energy or using the e+/e- particle number at Xmax as an energy proxy.")
@@ -94,18 +90,8 @@ class ProfileFitAnalysis(object):
         self.flagSingleObservable = singleObservable
 
 
-        if self.flagAllPrimaries:
-            self.primaryNames = {"2212": "Proton", "1000020040": "Helium", "1000080160": "Oxygen", "1000260560": "Iron"}
-            self.primaryColors = qualitative_colors(4)[::-1]
-        elif self.flagProtonHelium:
-            self.primaryNames = {"2212": "Proton", "1000020040": "Helium"}
-            self.primaryColors = qualitative_colors(4)[::-1][0:2]
-        elif self.flagHeliumOxygen:
-            self.primaryNames = {"1000020040": "Helium", "1000080160": "Oxygen"}
-            self.primaryColors = qualitative_colors(4)[::-1][1:3]
-        else:
-            self.primaryNames = {"2212": "Proton", "1000260560": "Iron"}
-            self.primaryColors = qualitative_colors(4)[::-3]
+        self.primaryNames = {"2212": "Proton", "1000020040": "Helium", "1000080160": "Oxygen", "1000260560": "Iron"}
+        self.primaryColors = qualitative_colors(4)[::-1]
 
 
         if self.flagSingleObservable == True:
@@ -175,18 +161,8 @@ class ProfileFitAnalysis(object):
 
                 particleID = int(cols[0])
                 
-                if self.flagAllPrimaries:
-                    corsikaIDs = [14, 402, 1608, 5626]
-                    pdgIDs = [2212, 1000020040, 1000080160, 1000260560]
-                elif self.flagProtonHelium:
-                    corsikaIDs = [14, 402]
-                    pdgIDs = [2212, 1000020040]
-                elif self.flagHeliumOxygen:
-                    corsikaIDs = [402, 1608]
-                    pdgIDs = [1000020040, 1000080160]
-                else:
-                    corsikaIDs = [14, 5626]
-                    pdgIDs = [2212, 1000260560]
+                corsikaIDs = [14, 402, 1608, 5626]
+                pdgIDs = [2212, 1000020040, 1000080160, 1000260560]
                 
                 if particleID in corsikaIDs:
                     particleID = pdgIDs[corsikaIDs.index(particleID)]
