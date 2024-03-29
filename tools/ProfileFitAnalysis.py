@@ -367,54 +367,25 @@ class ProfileFitAnalysis(object):
         if self.flagScalingCorrections == False:
             raise ValueError("Observables not scaled, will not smear unscaled values...")
         elif self.flagLargeSmearUncerts == True:
-            if self.muonEnergyScaling == 0.94 and self.highEmuonEnergyScaling == 0.82:
-                XmaxSmear = 40.0
-                EMXmaxSmear = 0.1
-                EMObslevSmear = 0.2
-                RSmear = 0.1  # double uncertainty from arxiv: 1811.04660
-                LSmear = 10.0  # in arxiv: 1811.04660 list uncertainty as 7.3+0.9 add in quad
-            elif self.muonEnergyScaling == 0.93 and self.highEmuonEnergyScaling == 0.82:
-                XmaxSmear = 40.0
-                EMXmaxSmear = 0.1  # This is smearing lgNe,max not Ne,max --> sigma of Ne,max is 0.1 so sigma of lgNe,max is ~0.045
-                EMObslevSmear = 0.2  # ~21-26% uncertainty in raw value
-                RSmear = 0.1  # double uncertainty from arxiv: 1811.04660
-                LSmear = 10.0  # in arxiv: 1811.04660 list uncertainty as 7.3+0.9 add in quad
-            elif self.muonEnergyScaling == 0.81 and self.highEmuonEnergyScaling == 0.72:                
-                XmaxSmear = 40.0
-                EMXmaxSmear = 0.1
-                EMObslevSmear = 0.2
-                RSmear = 0.1  # double uncertainty from arxiv: 1811.04660
-                LSmear = 10.0  # in arxiv: 1811.04660 list uncertainty as 7.3+0.9 add in quad
-            else:
-                raise ValueError("Not a valid combination of muon energy scaling factors...")            
+            XmaxSmear = 40.0
+            EMXmaxSmear = 0.1
+            EMObslevSmear = 0.2
+            RSmear = 0.1  # double uncertainty from arxiv: 1811.04660
+            LSmear = 10.0  # in arxiv: 1811.04660 list uncertainty as 7.3+0.9 add in quad
         else:
-            if self.muonEnergyScaling == 0.94 and self.highEmuonEnergyScaling == 0.82:
-                XmaxSmear = 20.0
-                EMXmaxSmear = 0.05
-                EMObslevSmear = 0.1
-                RSmear = 0.05  # in arxiv: 1811.04660 list uncertainty as 0.04+0.012 add in quad
-                LSmear = 5.0  # half of uncertainty from arxiv: 1811.04660
-            elif self.muonEnergyScaling == 0.93 and self.highEmuonEnergyScaling == 0.82:
-                XmaxSmear = 20.0
-                EMXmaxSmear = 0.05  # This is smearing lgNe,max not Ne,max --> sigma of Ne,max is 0.1 so sigma of lgNe,max is ~0.045
-                EMObslevSmear = 0.1  # ~21-26% uncertainty in raw value
-                RSmear = 0.05  # in arxiv: 1811.04660 list uncertainty as 0.04+0.012 add in quad
-                LSmear = 5.0  # half of uncertainty from arxiv: 1811.04660
-            elif self.muonEnergyScaling == 0.81 and self.highEmuonEnergyScaling == 0.72:                
-                XmaxSmear = 20.0
-                EMXmaxSmear = 0.05
-                EMObslevSmear = 0.1
-                RSmear = 0.05  # in arxiv: 1811.04660 list uncertainty as 0.04+0.012 add in quad
-                LSmear = 5.0  # half of uncertainty from arxiv: 1811.04660
-            else:
-                raise ValueError("Not a valid combination of muon energy scaling factors...")
-
+            XmaxSmear = 20.0
+            EMXmaxSmear = 0.05  # This is smearing lgNe,max not Ne,max --> sigma of Ne,max is 0.1 so sigma of lgNe,max is ~0.045
+            EMObslevSmear = 0.1  # ~21-26% uncertainty in raw value
+            RSmear = 0.05  # in arxiv: 1811.04660 list uncertainty as 0.04+0.012 add in quad
+            LSmear = 5.0  # half of uncertainty from arxiv: 1811.04660
 
         if self.flagSingleObservable:
             vals[0] += stats.norm.rvs(loc=0.0, scale=self.smearVal)
         else:
 
-            allSmearVals = [XmaxSmear, RSmear, LSmear]
+            # Add zeros at end because the sigma values should NOT be smeared (that would just be stupid)
+            # Doing this should be okay
+            allSmearVals = [XmaxSmear, RSmear, LSmear, 0.0, 0.0, 0.0]
 
             SmearVals = [allSmearVals[ind] for ind in self.observableIndices]
 
