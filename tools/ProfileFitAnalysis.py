@@ -220,6 +220,11 @@ class ProfileFitAnalysis(object):
                 event.XmaxfitAndringa = float(cols[69]) # Xmax from Andringa fit to .long file
                 event.sigmaXmaxfitAndringa = float(cols[70]) # Uncertainty in Xmax from Andringa fit
 
+                # Add in handling of infinities, so that observable uncertainties from the fits can be histogrammed w/o errors
+                for value in list(vars(event).keys()):
+                    if vars(event)[value] == np.inf:
+                        vars(event)[value] = -999.0  # Change all infinities to -999.0
+
                 self.eventList.append(event)
 
     def GetValues(self):
@@ -238,14 +243,14 @@ class ProfileFitAnalysis(object):
 
             # Apply data cuts if keyword provided...
             if (self.flagDataCuts == True) and (self.flagGHFits == True):
-                if event.sigmaXmaxfit == np.inf or event.sigmaRfit == np.inf or event.sigmaLfit == np.inf:
+                if event.sigmaXmaxfit == -999.0 or event.sigmaRfit == -999.0 or event.sigmaLfit == -999.0:
                     continue
                 elif event.sigmaXmaxfit > 5.0 or event.sigmaRfit > 0.05 or event.sigmaLfit > 5.0:
                     continue
                 elif event.Xmaxfit < 0.0:  # Maybe also include a cut on L values? (i.e. L < 350 or L < 325???)
                     continue
             elif (self.flagDataCuts == True) and (self.flagGHFits == False):
-                if event.sigmaXmaxfitAndringa == np.inf or event.sigmaRfitAndringa == np.inf or event.sigmaLfitAndringa == np.inf:
+                if event.sigmaXmaxfitAndringa == -999.0 or event.sigmaRfitAndringa == -999.0 or event.sigmaLfitAndringa == -999.0:
                     continue
                 elif event.sigmaXmaxfitAndringa > 5.0 or event.sigmaRfitAndringa > 0.05 or event.sigmaLfitAndringa > 5.0:
                     continue
@@ -289,7 +294,7 @@ class ProfileFitAnalysis(object):
                         Rval = event.RfitAndringa - (-0.03 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
                         Lval = event.LfitAndringa - (7.47 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
 
-                    if Xmaxval == np.nan or Xmaxval == np.inf:
+                    if Xmaxval == np.nan or Xmaxval == np.inf or Xmaxval == -999.0:
                         print(f"Bad value found! With Xmax={event.XmaxfitAndringa}, EMatXmax={event.nEmAtXmax}")
 
                 else:
@@ -716,14 +721,14 @@ class ProfileFitAnalysis(object):
 
             totalEvents += 1
 
-            if event.sigmaXmaxfit == np.inf or event.sigmaRfit == np.inf or event.sigmaLfit == np.inf:
+            if event.sigmaXmaxfit == -999.0 or event.sigmaRfit == -999.0 or event.sigmaLfit == -999.0:
                 poorGHFits += 1
             elif event.sigmaXmaxfit > 5.0 or event.sigmaRfit > 0.05 or event.sigmaLfit > 5.0:
                 poorGHFits += 1
             elif event.Xmaxfit < 0.0:
                 poorGHFits += 1
 
-            if event.sigmaXmaxfitAndringa == np.inf or event.sigmaRfitAndringa == np.inf or event.sigmaLfitAndringa == np.inf:
+            if event.sigmaXmaxfitAndringa == -999.0 or event.sigmaRfitAndringa == -999.0 or event.sigmaLfitAndringa == -999.0:
                 poorAndringaFits += 1
             elif event.sigmaXmaxfitAndringa > 5.0 or event.sigmaRfitAndringa > 0.05 or event.sigmaLfitAndringa > 5.0:
                 poorAndringaFits += 1
@@ -853,7 +858,7 @@ class ProfileFitAnalysis(object):
                 sigLString = 'sigmaL>5'
                 sigLCut = 5.0
 
-            if sigXmax == np.inf or sigR == np.inf or sigL == np.inf:
+            if sigXmax == -999.0 or sigR == -999.0 or sigL == -999.0:
                 fitsUnconstrained += 1
                 continue
 
@@ -975,9 +980,9 @@ class ProfileFitAnalysis(object):
                     eventsToBeCut += 1
                     continue
 
-                # Apply data cuts if keyword provided... (maybe put in GetValues instead?)
+                # Apply data cuts if keyword provided...
                 if (self.flagDataCuts == True) and (self.flagGHFits == True):
-                    if event.sigmaXmaxfit == np.inf or event.sigmaRfit == np.inf or event.sigmaLfit == np.inf:
+                    if event.sigmaXmaxfit == -999.0 or event.sigmaRfit == -999.0 or event.sigmaLfit == -999.0:
                         eventsToBeCut += 1
                         continue
                     elif event.sigmaXmaxfit > 5.0 or event.sigmaRfit > 0.05 or event.sigmaLfit > 5.0:
@@ -987,7 +992,7 @@ class ProfileFitAnalysis(object):
                         eventsToBeCut += 1
                         continue
                 elif (self.flagDataCuts == True) and (self.flagGHFits == False):
-                    if event.sigmaXmaxfitAndringa == np.inf or event.sigmaRfitAndringa == np.inf or event.sigmaLfitAndringa == np.inf:
+                    if event.sigmaXmaxfitAndringa == -999.0 or event.sigmaRfitAndringa == -999.0 or event.sigmaLfitAndringa == -999.0:
                         eventsToBeCut += 1
                         continue
                     elif event.sigmaXmaxfitAndringa > 5.0 or event.sigmaRfitAndringa > 0.05 or event.sigmaLfitAndringa > 5.0:
@@ -1046,9 +1051,9 @@ class ProfileFitAnalysis(object):
                     eventsToBeCut += 1
                     continue
 
-                # Apply data cuts if keyword provided... (maybe put in GetValues instead?)
+                # Apply data cuts if keyword provided...
                 if (self.flagDataCuts == True) and (self.flagGHFits == True):
-                    if event.sigmaXmaxfit == np.inf or event.sigmaRfit == np.inf or event.sigmaLfit == np.inf:
+                    if event.sigmaXmaxfit == -999.0 or event.sigmaRfit == -999.0 or event.sigmaLfit == -999.0:
                         eventsToBeCut += 1
                         continue
                     elif event.sigmaXmaxfit > 5.0 or event.sigmaRfit > 0.05 or event.sigmaLfit > 5.0:
@@ -1058,7 +1063,7 @@ class ProfileFitAnalysis(object):
                         eventsToBeCut += 1
                         continue
                 elif (self.flagDataCuts == True) and (self.flagGHFits == False):
-                    if event.sigmaXmaxfitAndringa == np.inf or event.sigmaRfitAndringa == np.inf or event.sigmaLfitAndringa == np.inf:
+                    if event.sigmaXmaxfitAndringa == -999.0 or event.sigmaRfitAndringa == -999.0 or event.sigmaLfitAndringa == -999.0:
                         eventsToBeCut += 1
                         continue
                     elif event.sigmaXmaxfitAndringa > 5.0 or event.sigmaRfitAndringa > 0.05 or event.sigmaLfitAndringa > 5.0:
