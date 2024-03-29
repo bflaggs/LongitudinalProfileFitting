@@ -33,7 +33,7 @@ class ProfileFitAnalysis(object):
     allPlottingNames = ["Xmax", "Rval", "Lval"]
 
 
-    def __init__(self, minDeg=0, maxDeg=72, muonScaling=0.0, highEmuonScaling=0.0, minLgE=16, maxLgE=18.5,
+    def __init__(self, minDeg=0, maxDeg=72, minLgE=16, maxLgE=18.5,
                  includeXmax=False,
                  includeRval=False, includeLval=False, useGHFits=False, useCorsikaXmax=False,
                  allfourPrimaries=False,
@@ -48,24 +48,24 @@ class ProfileFitAnalysis(object):
             # If I do this then I should get rid of the muonScaling and highEmuonScaling keywords and instead put a type of scaling keyword 
             # i.e. scalingType={"energy", "EMxmax", "EMobslev"}
             # This may be too ambitious to do at the moment and maybe should be put on the back-burner for now...
-            raise ValueError("Observatory must be set to either IceCube or Auger location! Other observatory location scalings can be added in the XXXXX file.")
+            raise ValueError("Observatory must be set to either IceCube or Auger location! Other observatory locations can be added but scaling would need to be redone.")
 
         if allfourPrimaries + protonAndHelium + heliumAndOxygen > 1:
             raise ValueError("Only one keyword specifying primary particle types can be set to True.")
 
-        if muonScaling == 0 or highEmuonScaling == 0:
-            print("Warning: Only one muon scaling factor is set.")
-            #raise ValueError("Must set both muon scaling factors (even if only using one type).")
+        if energyScaling == True and energyProxyScaling == True:
+            raise ValueError("Can only energy correct observables using a single method. Either directly using MC energy or using the e+/e- particle number at Xmax as an energy proxy.")
 
-        if applyScaling == False:
-            print("Warning: The muon observables will not be scaled according to the Heitler-Matthews model!")
+        if energyScaling == False and energyProxyScaling == False:
+            print("WARNING: The observables will not be energy corrected so there may be intrinsic energy dependencies impacting your results!")
 
         if applyDataCuts == False:
-            print("Warning: Anomolous profile fits will not be excluded from any resulting analysis or plots!")
+            print("WARNING: Anomolous profile fits will not be excluded from any resulting analysis or plots!")
+            print("To prevent NaN and infinity errors, all NaNs and infs will be replaced with '-999.0'\n")
 
         self.observatoryName = observatory
-        self.muonEnergyScaling = muonScaling
-        self.highEmuonEnergyScaling = highEmuonScaling
+        self.energyCorrection = energyScaling
+        self.energyProxyCorrection = energyProxyScaling
 
         self.minLgE = minLgE
         self.maxLgE = maxLgE
@@ -75,8 +75,6 @@ class ProfileFitAnalysis(object):
         self.maxDeg = maxDeg
         self.maxZen = self.ZenithScaling(self.maxDeg / 180.0 * np.pi)
 
-        self.flagEMxmax = includeEMxmax
-        self.flagEMObslev = includeEMObslev
         self.flagRval = includeRval
         self.flagLval = includeLval
         self.flagGHFits = useGHFits
@@ -86,7 +84,7 @@ class ProfileFitAnalysis(object):
         self.flagProtonHelium = protonAndHelium
         self.flagHeliumOxygen = heliumAndOxygen
 
-        self.flagScalingCorrections = applyScaling
+        #self.flagScalingCorrections = applyScaling
         self.flagDataCuts = applyDataCuts
         self.flagLargeSmearUncerts = useLargerSmearValues
         self.flagSingleObservable = singleObservable
@@ -265,87 +263,58 @@ class ProfileFitAnalysis(object):
 
             energy = event.energy
 
+            if self.energyCorrection == True:
+                raise ValueError("The energy correction to MC energy has not been studied in detail. Need to do analysis to find correction factors and update code.")
 
-            if self.flagScalingCorrections == True:
+            elif self.energyProxyCorrection == True:
 
-                if self.muonEnergyScaling == 0.94 and self.highEmuonEnergyScaling == 0.82:
-                    if self.observatoryName == "Auger":
-                        raise ValueError("This scaling has not been optimized for the Auger observatory. Repeat scaling steps for Auger and then update code to continue.")
+                if self.flagGHFits == False and self.flagCorsikaXmax == False:
 
-                    lgNEM = np.log10(event.nEmAtXmax / (energy * 1e-9) ** 1.01)
-
-                    lgNEMObslev = np.log10(event.nEmObslev / (energy * 1e-9) ** 1.15)
-
-                elif self.muonEnergyScaling == 0.93 and self.highEmuonEnergyScaling == 0.82:
-                    # For these parameters then scale w.r.t. the electron number at Xmax
+                    # There are many values hard-coded here. I should really update the code to not be like this
+                    # But I haven't had time to figure out the best way to do that directly from the scaling outputs...
+                    # So for now keep as is (sorry lmao)
                     if self.observatoryName == "IceCube":
                         scaleCorrection = 0.01 # Correction between lg(Ne) vs. lg(E) plot
                         EeVnEMNormalization = 605741418.2773747 # zen = 0-72 deg (all zenith angles), lgE = 17.9-18.1
+
+                        Xmaxval = event.XmaxfitAndringa - (62.01 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
+                        Rval = event.RfitAndringa - (-0.03 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
+                        Lval = event.LfitAndringa - (7.18 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
+
                     elif self.observatoryName == "Auger":
                         scaleCorrection = 0.01 # Correction between lg(Ne) vs. lg(E) plot
                         EeVnEMNormalization = 586908936.4969574 # zen = 0-65 deg (Auger, all zenith angles), lgE = 17.9-18.1
 
-                    lgNEM = np.log10(event.nEmAtXmax)
+                        Xmaxval = event.XmaxfitAndringa - (62.82 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
+                        Rval = event.RfitAndringa - (-0.03 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
+                        Lval = event.LfitAndringa - (7.47 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
 
-                    if self.observatoryName == "IceCube":
-                        lgNEMObslevCorr = np.log10(event.nEmObslev / (event.nEmAtXmax / EeVnEMNormalization) ** (1.13 + scaleCorrection))
-                    elif self.observatoryName == "Auger":
-                        lgNEMObslevCorr = np.log10(event.nEmObslev / (event.nEmAtXmax / EeVnEMNormalization) ** (1.16 + scaleCorrection))
-
-
-                elif self.muonEnergyScaling == 0.81 and self.highEmuonEnergyScaling == 0.72:
-                    raise ValueError("This scaling type does not normalize the electron numbers at ground and therefore more scaling analysis is necessary.")
-
-                    if self.observatoryName == "Auger":
-                        raise ValueError("This scaling has not been optimized for the Auger observatory. Repeat scaling steps for Auger and then update code to continue.")
-
-                    # For these parameters then scale w.r.t. the electron number at observation level (i.e. at ground)
-                    scaleCorrection = 0.15 # Correction between lg(Ne) at Ground vs. lg(E) plot
-                    #scaleCorrection = 0.01 # Correction to make it so everything scales correctly vs. energy (not sure why this value works...)
-
-                    lgNEM = np.log10(event.nEmAtXmax / (event.nEmObslev) ** (0.87 + scaleCorrection))
-
-                    lgNEMObslev = np.log10(event.nEmObslev / (event.nEmObslev) ** (0.99 + scaleCorrection))
+                    if Xmaxval == np.nan or Xmaxval == np.inf:
+                        print(f"Bad value found! With Xmax={event.XmaxfitAndringa}, EMatXmax={event.nEmAtXmax}")
 
                 else:
-                    raise ValueError("Not a valid combination of muon energy scaling factors...")
+                    raise ValueError("This combination of flags for Xmax, R, and L has not been analyzed for energy proxy corrections! Update the code to account for this scaling.") 
+
+            else:  # No energy corrections (i.e. energyScaling=False and energyProxyScaling=False)
+                if self.flagGHFits == True and self.flagCorsikaXmax == True:
+                    Xmaxval = event.xmax
+                    Rval = event.Rfit
+                    Lval = event.Lfit
+                elif self.flagGHFits == True and self.flagCorsikaXmax == False:
+                    Xmaxval = event.Xmaxfit
+                    Rval = event.Rfit
+                    Lval = event.Lfit
+                elif self.flagGHFits == False and self.flagCorsikaXmax == True:                
+                    Xmaxval = event.xmax
+                    Rval = event.RfitAndringa
+                    Lval = event.LfitAndringa
+                else:  # Parameterized Gaisser-Hillas fit values
+                    Xmaxval = event.XmaxfitAndringa
+                    Rval = event.RfitAndringa
+                    Lval = event.LfitAndringa
 
 
-            if self.flagGHFits == True and self.flagCorsikaXmax == True:
-                Xmaxval = event.xmax
-                Rval = event.Rfit
-                Lval = event.Lfit
-                raise ValueError("This combination of flags for Xmax, R, and L has not scaled! Update the code to account for this scaling.")
-            elif self.flagGHFits == True and self.flagCorsikaXmax == False:
-                Xmaxval = event.Xmaxfit
-                Rval = event.Rfit
-                Lval = event.Lfit
-                raise ValueError("This combination of flags for Xmax, R, and L has not scaled! Update the code to account for this scaling.")
-            elif self.flagGHFits == False and self.flagCorsikaXmax == True:                
-                Xmaxval = event.xmax
-                Rval = event.RfitAndringa
-                Lval = event.LfitAndringa
-                raise ValueError("This combination of flags for Xmax, R, and L has not scaled! Update the code to account for this scaling.")
-            else:
-                if self.flagScalingCorrections == False:
-                    XmaxvalCorr = event.XmaxfitAndringa
-                    RvalCorr = event.RfitAndringa
-                    LvalCorr = event.LfitAndringa
-                else:
-                    if self.observatoryName == "IceCube":
-                        XmaxvalCorr = event.XmaxfitAndringa - (62.01 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
-                        RvalCorr = event.RfitAndringa - (-0.03 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
-                        LvalCorr = event.LfitAndringa - (7.18 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
-                    elif self.observatoryName == "Auger":
-                        XmaxvalCorr = event.XmaxfitAndringa - (62.82 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
-                        RvalCorr = event.RfitAndringa - (-0.03 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
-                        LvalCorr = event.LfitAndringa - (7.47 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
-
-                        if XmaxvalCorr == np.nan or XmaxvalCorr == np.inf:
-                            print(f"Bad value found! With Xmax={event.XmaxfitAndringa}, EMatXmax={event.nEmAtXmax}")
-
-
-            allValues = [XmaxvalCorr, RvalCorr, LvalCorr]
+            allValues = [Xmaxval, Rval, Lval]
 
             vals = [allValues[ind] for ind in self.observableIndices]
 
