@@ -47,12 +47,12 @@ class ProfileFitAnalysis(object):
         # ====================================================================== #
 
         if observatory != "IceCube" and observatory != "Auger":
-            # If I do this then I should get rid of the muonScaling and highEmuonScaling keywords and instead put a type of scaling keyword 
-            # i.e. scalingType={"energy", "EMxmax", "EMobslev"}
-            # This may be too ambitious to do at the moment and maybe should be put on the back-burner for now...
             raise ValueError("Observatory must be set to either IceCube or Auger location! Other observatory locations can be added but scaling would need to be redone.")
 
         if energyScaling == True and energyProxyScaling == True:
+            # Maybe instead of this put some scaling keyword that accesses a dictionary
+            # i.e. scalingType={"energy", "EMxmax", "EMobslev"}
+            # This may be too ambitious to do at the moment and maybe should be put on the back-burner for now...
             raise ValueError("Can only energy correct observables using a single method. Either directly using MC energy or using the e+/e- particle number at Xmax as an energy proxy.")
 
         if energyScaling == False and energyProxyScaling == False:
@@ -80,11 +80,6 @@ class ProfileFitAnalysis(object):
         self.flagGHFits = useGHFits
         self.flagCorsikaXmax = useCorsikaXmax
 
-        self.flagAllPrimaries = allfourPrimaries
-        self.flagProtonHelium = protonAndHelium
-        self.flagHeliumOxygen = heliumAndOxygen
-
-        #self.flagScalingCorrections = applyScaling
         self.flagDataCuts = applyDataCuts
         self.flagLargeSmearUncerts = useLargerSmearValues
         self.flagSingleObservable = singleObservable
