@@ -599,7 +599,7 @@ class ProfileFitAnalysis(object):
 
     def MakeHistograms(self, filename, fixedBins=False, calcMeanMedianMode=False):
         """
-        Used to make histograms of the observable values from the shower profile fits (but no other observables)
+        Used to make histograms of the observable values and their uncertainties from the shower profile fits
         """
 
         nCols = 1
@@ -607,8 +607,6 @@ class ProfileFitAnalysis(object):
         gs = gridspec.GridSpec(nRows, nCols, wspace=0.3, hspace=0.3)
 
         for ipar in range(len(self.params)):
-            if self.params[ipar] not in [r"$X_{\rm max}$ (g/cm$^2$)", "R", r"L (g/cm$^2$)"]:
-                continue
 
             fig = plt.figure(figsize=(nCols * 18.0 / 2.54, nRows * 15.0 / 2.54))
             ax = fig.add_subplot(gs[0])
@@ -629,6 +627,7 @@ class ProfileFitAnalysis(object):
                     if max(valsForHist) >= maxBin:
                         maxBin = max(valsForHist)
             else:
+
                 if self.params[ipar] == r"$X_{\rm max}$ (g/cm$^2$)":
                     minBin = 500
                     maxBin = 1100
@@ -638,6 +637,15 @@ class ProfileFitAnalysis(object):
                 elif self.params[ipar] == r"L (g/cm$^2$)":
                     minBin = 175
                     maxBin = 350
+                elif self.params[ipar] == r"$\sigma_{X_{\rm max}}$ (g/cm$^2$)":
+                    minBin = 0
+                    maxBin = 100
+                elif self.params[ipar] == r"$\sigma_{R}$":
+                    minBin = 0
+                    maxBin = 1
+                elif self.params[ipar] == r"$\sigma_{L}$ (g/cm$^2$)":
+                    minBin = 0
+                    maxBin = 100
                 else:
                     raise ValueError(f"Code not optimized for parameter {self.params[ipar]}. Try running with different parameters or updating code.")
             
@@ -696,6 +704,35 @@ class ProfileFitAnalysis(object):
                     fitInfo = "GHShiftedL"
                 else:
                     fitInfo = "AndringaL"
+            elif self.params[ipar] == r"$\sigma_{X_{\rm max}}$ (g/cm$^2$)":
+                xName = "sigmaXmax"
+                ax.text(0.74, 0.66, self.observatoryName, transform=ax.transAxes, fontsize=14)
+                ax.text(0.65, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=14)
+                ax.text(0.65, 0.55, rf"lg(E) = {self.minLgE}$-${self.maxLgE}", transform=ax.transAxes, fontsize=14)
+                if self.flagCorsikaXmax == False and self.flagGHFits == True:
+                    fitInfo = "GHShiftedSigmaXmax"
+                elif self.flagCorsikaXmax == False and self.flagGHFits == False:
+                    fitInfo = "AndringaSigmaXmax"
+                else:
+                    raise ValueError("There's no saved uncertainty in Xmax from the CORSIKA Gaisser-Hillas fit.")
+            elif self.params[ipar] == r"$\sigma_{R}$":
+                xName = "sigmaRval"
+                ax.text(0.12, 0.93, self.observatoryName, transform=ax.transAxes, fontsize=14)
+                ax.text(0.03, 0.87, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=14)
+                ax.text(0.03, 0.81, rf"lg(E) = {self.minLgE}$-${self.maxLgE}", transform=ax.transAxes, fontsize=14)
+                if self.flagGHFits == True:
+                    fitInfo = "GHShiftedSigmaR"
+                else:
+                    fitInfo = "AndringaSigmaR"
+            elif self.params[ipar] == r"$\sigma_{L}$ (g/cm$^2$)":
+                xName = "sigmaLval"
+                ax.text(0.74, 0.66, self.observatoryName, transform=ax.transAxes, fontsize=14)
+                ax.text(0.65, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=14)
+                ax.text(0.65, 0.55, rf"lg(E) = {self.minLgE}$-${self.maxLgE}", transform=ax.transAxes, fontsize=14)
+                if self.flagGHFits == True:
+                    fitInfo = "GHShiftedSigmaL"
+                else:
+                    fitInfo = "AndringaSigmaL"
             else:
                 raise ValueError(f"Code not written for parameter {self.params[ipar]}. Please update or try running again with different settings.")
 
