@@ -26,25 +26,18 @@ from .PlottingTools import qualitative_colors
 
 class ProfileFitAnalysis(object):
 
-    allObservables = [r"$X_{\rm max}$ (g/cm$^2$)",
-                      r"lg(N$_{{\rm e, max}}$)", r"lg(N$_{{\rm e}}$)", "R", r"L (g/cm$^2$)"]
+    allObservables = [r"$X_{\rm max}$ (g/cm$^2$)", "R", r"L (g/cm$^2$)"]
 
-    allObservablesNoScaling = [r"$X_{\rm max, true}$ (g/cm$^2$)",
-                               r"lg(N$_{{\rm e, max}}$)", r"lg(N$_{{\rm e, true}}$)", r"R$_{\rm true}$", r"L$_{\rm true}$ (g/cm$^2$)"]
+    allObservablesNoScaling = [r"$X_{\rm max, true}$ (g/cm$^2$)", r"R$_{\rm true}$", r"L$_{\rm true}$ (g/cm$^2$)"]
 
-    allPlottingNames = ["Xmax",
-                        "nEM", "nEMObslev", "Rval", "Lval"]
-
-    # If color is "#555555" then this color needs to be updated in the future...
-    observableColors = ["#88CCEE",
-                        "#555555", "#555555", "#117733", "#44AA99"]
+    allPlottingNames = ["Xmax", "Rval", "Lval"]
 
 
     def __init__(self, minDeg=0, maxDeg=72, muonScaling=0.0, highEmuonScaling=0.0, minLgE=16, maxLgE=18.5,
-                 includeXmax=False, includeEMxmax=False, includeEMObslev=False,
+                 includeXmax=False,
                  includeRval=False, includeLval=False, useGHFits=False, useCorsikaXmax=False,
                  allfourPrimaries=False,
-                 protonAndHelium=False, heliumAndOxygen=False, applyScaling=True, applyDataCuts=False,
+                 protonAndHelium=False, heliumAndOxygen=False, energyScaling=False, energyProxyScaling=True, applyDataCuts=False,
                  observatory="IceCube", useLargerSmearValues=False, singleObservable=False, smearVal=0.0): 
 
         # ====================================================================== #
@@ -118,17 +111,14 @@ class ProfileFitAnalysis(object):
             print("Warning: Only one observable will be used in the analysis. If making contour/projection plots an error will occur!")
 
 
-        self.kwObservables = [includeXmax,
-                              includeEMxmax, includeEMObslev, includeRval, includeLval]
+        self.kwObservables = [includeXmax, includeRval, includeLval]
 
         self.params = []
-        self.colors = []
         self.observableIndices = []
         self.plotNames = []
 
         for index in range(len(self.kwObservables)):
             if self.kwObservables[index] == 1:
-                self.colors.append(self.observableColors[index])
                 self.observableIndices.append(index)
                 self.plotNames.append(self.allPlottingNames[index])
                 if self.flagScalingCorrections == True:
@@ -207,6 +197,10 @@ class ProfileFitAnalysis(object):
                 event.azimuth = azimuth
 
                 event.xmax = float(cols[53])
+
+                # Keep these only for scaling b/c these are the energy reference observables!
+                # Could also scale exactly w/ MC energy but true air shower energy from data is never known exactly...
+                # Maybe could scale w.r.t. MC energy then smear out the MC energy by lg(E)=0.5 or so...
                 event.nEmAtXmax = float(cols[55])
                 event.nEmObslev = float(cols[32]) # Number of electrons/positrons at ground (at Obslev)
 
@@ -272,13 +266,8 @@ class ProfileFitAnalysis(object):
             energy = event.energy
 
 
-            if self.flagScalingCorrections == False:
-                lgNEM = np.log10(event.nEmAtXmax)
+            if self.flagScalingCorrections == True:
 
-                # Changed name to have "Corr" at the end to remain consistent w/ other observables, made it easier to implement in code...
-                lgNEMObslevCorr = np.log10(event.nEmObslev)
-
-            else:
                 if self.muonEnergyScaling == 0.94 and self.highEmuonEnergyScaling == 0.82:
                     if self.observatoryName == "Auger":
                         raise ValueError("This scaling has not been optimized for the Auger observatory. Repeat scaling steps for Auger and then update code to continue.")
@@ -326,17 +315,17 @@ class ProfileFitAnalysis(object):
                 Xmaxval = event.xmax
                 Rval = event.Rfit
                 Lval = event.Lfit
-                raise ValueError("This combination of flags for Xmax, R, and L has not scaled! Update the code to acount for this scaling.")
+                raise ValueError("This combination of flags for Xmax, R, and L has not scaled! Update the code to account for this scaling.")
             elif self.flagGHFits == True and self.flagCorsikaXmax == False:
                 Xmaxval = event.Xmaxfit
                 Rval = event.Rfit
                 Lval = event.Lfit
-                raise ValueError("This combination of flags for Xmax, R, and L has not scaled! Update the code to acount for this scaling.")
+                raise ValueError("This combination of flags for Xmax, R, and L has not scaled! Update the code to account for this scaling.")
             elif self.flagGHFits == False and self.flagCorsikaXmax == True:                
                 Xmaxval = event.xmax
                 Rval = event.RfitAndringa
                 Lval = event.LfitAndringa
-                raise ValueError("This combination of flags for Xmax, R, and L has not scaled! Update the code to acount for this scaling.")
+                raise ValueError("This combination of flags for Xmax, R, and L has not scaled! Update the code to account for this scaling.")
             else:
                 if self.flagScalingCorrections == False:
                     XmaxvalCorr = event.XmaxfitAndringa
@@ -356,8 +345,7 @@ class ProfileFitAnalysis(object):
                             print(f"Bad value found! With Xmax={event.XmaxfitAndringa}, EMatXmax={event.nEmAtXmax}")
 
 
-            allValues = [XmaxvalCorr,
-                         lgNEM, lgNEMObslevCorr, RvalCorr, LvalCorr]
+            allValues = [XmaxvalCorr, RvalCorr, LvalCorr]
 
             vals = [allValues[ind] for ind in self.observableIndices]
 
@@ -434,11 +422,7 @@ class ProfileFitAnalysis(object):
             vals[0] += stats.norm.rvs(loc=0.0, scale=self.smearVal)
         else:
 
-            allSmearVals = [XmaxSmear,
-                            lowEMuTotSmear, RatioEMNMuTot, RatioEMObslevNMuTot,
-                            highEMuSmear, RatioEMNMuHigh, RatioEMObslevNMuHigh,
-                            lowEMu800Smear, RatioEMNMu850m, RatioEMObslevNMu850m,
-                            EMXmaxSmear, EMObslevSmear, RSmear, LSmear]
+            allSmearVals = [XmaxSmear, RSmear, LSmear]
 
             SmearVals = [allSmearVals[ind] for ind in self.observableIndices]
 
