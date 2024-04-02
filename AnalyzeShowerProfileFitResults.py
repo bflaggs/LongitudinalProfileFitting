@@ -59,6 +59,8 @@ parser.add_argument("--printNumberEventsToCut", action="store_true", help="If se
 parser.add_argument("--makeLongFitHistograms", action="store_true", help="If set, will make histograms of longitudinal fit parameters")
 parser.add_argument("--useGHShiftedFits", action="store_true", help="If set, will use the GH shifted fits in analysis (making histograms or printing poor fit numbers)")
 parser.add_argument("--applyDataCuts", action="store_true", help="If set, will cut out fits with unconstrained/poor fit parameters")
+parser.add_argument("--energyScaling", action="store_true", help="If set, will scale the observables w.r.t. the true MC shower energy")
+parser.add_argument("--energyProxyScaling", action="store_true", help="If set, will scale the observables w.r.t. an energy proxy (the e+/e- number at Xmax)")
 args = parser.parse_args()
 
 if args.observatory != "IceCube" and args.observatory != "Auger":
@@ -70,8 +72,20 @@ if args.zenithRange[0] >= args.zenithRange[1]:
 if args.energyRange[0] >= args.energyRange[1]:
     raise ValueError("Can not have starting energy bin be greater than or equal to final energy bin.")
 
+if args.energyScaling == True and args.energyProxyScaling == True:
+    raise ValueError("Can not set observables to be scaled by both the MC energy and an energy proxy (it makes no sense to do such a thing...)")
+
 if args.useGHShiftedFits == True and args.printNumberEventsToCut + args.makeLongFitHistograms == 0:
     print("WARNING: Using the Gaisser-Hillas shifted fits does nothing unless printing to terminal the number of poor fits or making histograms.\n")
+
+if args.energyScaling == True:
+    print("WARNING: Setting the observables to be scaled w.r.t. true MC energy will probably throw an error as this scaling for these observables has not been studied in detail.")
+    print("Good luck :) \n")
+
+if args.energyScaling == True or args.energyProxyScaling == True:
+    print("WARNING: The observable uncertainties will not be scaled.")
+    print("You can update the code if you want to scale them, but it requires studying how the uncertainties vary w/ energy.\n")
+    # Since these uncertainties are taken from a simply scipy.curve_fit then I don't know if they will depend on energy. But it would be interesting to see...
 
 minDeg = args.zenithRange[0]
 maxDeg = args.zenithRange[1]
@@ -82,11 +96,20 @@ maxLgE = args.energyRange[1]
 observatory = args.observatory
 flagGHShiftedFits = args.useGHShiftedFits
 flagDataCut = args.applyDataCuts
+flagEnergyScale = args.energyScaling
+flagEnergyProxyScale = args.energyProxyScaling
 
 if flagDataCut == True:
     fileDataCut = "_DataCutsApplied"
 else:
     fileDataCut = ""
+
+if flagEnergyScale == True:
+    fileDataCut = fileDataCut + "_EnergyScaled"
+elif flagEnergyProxyScale == True:
+    fileDataCut = fileDataCut + "_EnergyProxyScaled"
+else:
+    fileDataCut = fileDataCut
 
 # Can add keywords used to investigate only certain primaries
 # I had them here but removed them because didn't think it was necessary at the moment as one can just read in the primaries they want
@@ -95,7 +118,7 @@ filePrimNames = ""
 analysis = ProfileFitAnalysis(minDeg=minDeg, maxDeg=maxDeg, minLgE=minLgE, maxLgE=maxLgE,
                               includeXmax=True, includeRval=True, includeLval=True,
                               includeSigmas=True, useGHFits=flagGHShiftedFits, useCorsikaXmax=False,
-                              energyScaling=False, energyProxyScaling=False, applyDataCuts=flagDataCut,
+                              energyScaling=flagEnergyScale, energyProxyScaling=flagEnergyProxyScale, applyDataCuts=flagDataCut,
                               observatory=observatory, useLargerSmearValues=False, singleObservable=False, smearVal=0.0)
 
 for file in args.input:
