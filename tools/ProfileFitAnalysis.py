@@ -873,6 +873,8 @@ class ProfileFitAnalysis(object):
                 fitsRAbove1 += 1
                 continue
 
+            # Fits w/ L > 350 aren't bad fits but there are a few showers with such large widths it draws out the histogram distributions
+            # Not sure yet what could cause such elongated showers... although they happen more likely for p and He (as expected)
             if LValue > 350.0:
                 fitsLAbove350 += 1
                 continue
