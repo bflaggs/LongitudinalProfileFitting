@@ -230,7 +230,7 @@ class ProfileFitAnalysis(object):
                     continue
                 elif event.sigmaXmaxfitAndringa > 5.0 or event.sigmaRfitAndringa > 0.05 or event.sigmaLfitAndringa > 5.0:
                     continue
-                elif event.RfitAndringa < 0.0 or event.LfitAndringa > 350.0:  # Maybe also include a cut on L values? (i.e. L < 350 or L < 325???)
+                elif event.RfitAndringa < 0.0:  # Maybe also include a cut on L values? (i.e. L < 350 or L < 325???)
                     continue
 
             zen = event.zenith
@@ -338,6 +338,8 @@ class ProfileFitAnalysis(object):
         if self.flagScalingCorrections == False:
             raise ValueError("Observables not scaled, will not smear unscaled values...")
         elif self.flagLargeSmearUncerts == True:
+            # Note: the EM particle number smearing values are still listed here but not used
+            # Keep them for if you want to add smearing in energy reference in future (like what was done for mass sensitivity analysis)
             XmaxSmear = 40.0
             EMXmaxSmear = 0.1
             EMObslevSmear = 0.2
@@ -570,13 +572,13 @@ class ProfileFitAnalysis(object):
                         maxBin = max(valsForHist)
             else:
 
-                if self.params[ipar] == r"$X_{\rm max}$ (g/cm$^2$)":
+                if self.params[ipar] == r"$X_{\rm max, true}$ (g/cm$^2$)":
                     minBin = 500
                     maxBin = 1100
-                elif self.params[ipar] == "R":
+                elif self.params[ipar] == r"R$_{\rm true}$":
                     minBin = 0.0
                     maxBin = 0.6
-                elif self.params[ipar] == r"L (g/cm$^2$)":
+                elif self.params[ipar] == r"L$_{\rm true}$ (g/cm$^2$)":
                     minBin = 175
                     maxBin = 350
                 elif self.params[ipar] == r"$\sigma_{X_{\rm max}}$ (g/cm$^2$)":
@@ -617,7 +619,7 @@ class ProfileFitAnalysis(object):
             ax.yaxis.set_ticks_position("both")
             ax.xaxis.set_ticks_position("both")
 
-            if self.params[ipar] == r"$X_{\rm max}$ (g/cm$^2$)":
+            if self.params[ipar] == r"$X_{\rm max, true}$ (g/cm$^2$)":
                 xName = "Xmax"
                 ax.text(0.74, 0.66, self.observatoryName, transform=ax.transAxes, fontsize=14)
                 ax.text(0.65, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=14)
@@ -628,7 +630,7 @@ class ProfileFitAnalysis(object):
                     fitInfo = "GHShiftedXmax"
                 else:
                     fitInfo = "AndringaXmax"
-            elif self.params[ipar] == "R":
+            elif self.params[ipar] == r"R$_{\rm true}$":
                 xName = "Rval"
                 ax.text(0.12, 0.93, self.observatoryName, transform=ax.transAxes, fontsize=14)
                 ax.text(0.03, 0.87, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=14)
@@ -637,7 +639,7 @@ class ProfileFitAnalysis(object):
                     fitInfo = "GHShiftedR"
                 else:
                     fitInfo = "AndringaR"
-            elif self.params[ipar] == r"L (g/cm$^2$)":
+            elif self.params[ipar] == r"L$_{\rm true}$ (g/cm$^2$)":
                 xName = "Lval"
                 ax.text(0.74, 0.66, self.observatoryName, transform=ax.transAxes, fontsize=14)
                 ax.text(0.65, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=14)
