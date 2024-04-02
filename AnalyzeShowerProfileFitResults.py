@@ -15,8 +15,8 @@
 # Auger   (lyon)    -> /pbs/home/b/bflaggs/SimulationWork/ParsedData/SIB23c/*/FILES_TO_READ
 
 # Possible Updates to Make:
-# 1. Add a way to make histograms of the uncertainties in the longitudinal fit parameters
-# 2. Add a way to make Xmax comparison scatter plots which plot fit Xmax vs. CORSIKA Xmax
+# 1. Add a way to make histograms of the uncertainties in the longitudinal fit parameters (done I think)
+# 2. Add a way to make Xmax comparison scatter plots which plot fit Xmax vs. CORSIKA Xmax (work in progess, would need to add keyword/edit parameters...)
 
 # CHECK FOR THIS UPDATES IN ~/Documents/Research/random_scripts/old_analysis_scripts
 # will definitely need to update them though...
@@ -44,8 +44,8 @@ from os.path import isfile, join
 
 ABS_PATH_HERE = str(os.path.dirname(os.path.realpath(__file__)))
 
-from python_tools.PlottingTools import qualitative_colors
-from python_tools.MultivariateMass_FinalizedAnalysis_FOMPaper import MultivariateMassAnalysis
+from tools.PlottingTools import qualitative_colors
+from tools.ProfileFitAnalysis import ProfileFitAnalysis
 
 import argparse
 
@@ -71,7 +71,7 @@ if args.energyRange[0] >= args.energyRange[1]:
     raise ValueError("Can not have starting energy bin be greater than or equal to final energy bin.")
 
 if args.useGHShiftedFits == True and args.printNumberEventsToCut + args.makeLongFitHistograms == 0:
-    print("Warning: Using the GH Shifted Fits does nothing unless printing to terminal the number of poor fits or making histograms.\n")
+    print("WARNING: Using the Gaisser-Hillas shifted fits does nothing unless printing to terminal the number of poor fits or making histograms.\n")
 
 minDeg = args.zenithRange[0]
 maxDeg = args.zenithRange[1]
@@ -88,33 +88,24 @@ if flagDataCut == True:
 else:
     fileDataCut = ""
 
-flagAllPrims = True # Note: Can not make Fisher projections when this flag is set to "True"
-flagProtHe = False
-flagHeO = False
+# Can add keywords used to investigate only certain primaries
+# I had them here but removed them because didn't think it was necessary at the moment as one can just read in the primaries they want
+filePrimNames = ""
 
-if flagAllPrims == True and flagProtHe == False and flagHeO == False:
-    filePrimNames = "_allPrimaries"
-elif flagAllPrims == False and flagProtHe == True and flagHeO == False:
-    filePrimNames = "_ProtonHelium"
-elif flagAllPrims == False and flagProtHe == False and flagHeO == True:
-    filePrimNames = "_HeliumOxygen"
-else:
-    filePrimNames = "_ProtonIron"
-
-
-analysis = MultivariateMassAnalysis(minDeg=minDeg, maxDeg=maxDeg, muonScaling=0.0, highEmuonScaling=0.0, minLgE=minLgE, maxLgE=maxLgE,
-                                    includeXmax=True, includeMuObsLev=False, includeMuhighE=False, includeMu800m=False,
-                                    includeEMratio=False, includeEMxmax=False, includeEMObslev=False,
-                                    includeRval=True, includeLval=True, useGHFits=flagGHShiftedFits, useCorsikaXmax=False,
-                                    first10rings=False, last10rings=False, allfourPrimaries=flagAllPrims,
-                                    protonAndHelium=flagProtHe, heliumAndOxygen=flagHeO, applyScaling=False, applyDataCuts=flagDataCut,
-                                    observatory=observatory, useLargerSmearValues=False, singleObservable=False, smearVal=0.0)
+analysis = ProfileFitAnalysis(minDeg=minDeg, maxDeg=maxDeg, minLgE=minLgE, maxLgE=maxLgE,
+                              includeXmax=True, includeRval=True, includeLval=True,
+                              includeSigmas=True, useGHFits=flagGHShiftedFits, useCorsikaXmax=False,
+                              energyScaling=False, energyProxyScaling=False, applyDataCuts=flagDataCut,
+                              observatory=observatory, useLargerSmearValues=False, singleObservable=False, smearVal=0.0)
 
 for file in args.input:
     analysis.ReadSingleFile(file)
 
 if args.compareFitTypes == True:
     # Running these class functions w/ the applyDataCuts keyword does not change the output plots...
+    #==================================================================
+    # NOTE: NEED TO DOUBLE CHECK THIS IS STILL TRUE B/C OF RECENT EDITS
+    #==================================================================
     analysis.PlotBadFitsFractions(ABS_PATH_HERE, includeBadFitValues=True)
     analysis.PlotTypesBadFits(ABS_PATH_HERE, fittype="GHShifted")
     analysis.PlotTypesBadFits(ABS_PATH_HERE, fittype="Andringa")
@@ -125,17 +116,18 @@ if args.printNumberEventsToCut == True:
     else:
         print("Printing statistics of poor events for the GH parameterized fits...\n")
     analysis.GetNumberOfCutEvents()
-    analysis.GetNumberOfEventsWhereCORSIKAFitFails()
+    # Failed CORSIKA fit refers to a difference between CORSIKA Xmax and my fit Xmax of > 10 g/cm2
+    analysis.GetNumberOfEventsWhereCORSIKAFitFails(priorToDataCuts=False)  # Set keyword to true to see how many CORSIKA fits fail before data cuts
 
 
 if args.makeLongFitHistograms == True:
     analysis.GetValues()
 
     if args.useGHShiftedFits == True:
-        filename = ABS_PATH_HERE + "/plots/histograms/FitParameters/GHShiftedFit/" + observatory + "_LongitudinalFit" + filePrimNames + fileDataCut + \
+        filename = ABS_PATH_HERE + "/plots/histograms/GHShiftedFit/" + observatory + "_LongitudinalFit" + filePrimNames + fileDataCut + \
                  f"_lgE{minLgE:.1f}_{maxLgE:.1f}_zen{minDeg:.0f}_{maxDeg:.0f}"
     else:
-        filename = ABS_PATH_HERE + "/plots/histograms/FitParameters/GHParameterizedFit/" + observatory + "_LongitudinalFit" + filePrimNames + fileDataCut + \
+        filename = ABS_PATH_HERE + "/plots/histograms/GHParameterizedFit/" + observatory + "_LongitudinalFit" + filePrimNames + fileDataCut + \
                  f"_lgE{minLgE:.1f}_{maxLgE:.1f}_zen{minDeg:.0f}_{maxDeg:.0f}"
 
     # Can fix plot range w/ fixedBins and include mean+median+mode in legend w/ calcMeanMedianMode 
