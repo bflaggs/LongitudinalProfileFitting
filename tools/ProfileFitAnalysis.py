@@ -57,6 +57,9 @@ class ProfileFitAnalysis(object):
 
         if energyScaling == False and energyProxyScaling == False:
             print("WARNING: The observables will not be energy corrected so there may be intrinsic energy dependencies impacting your results!")
+            self.flagScalingCorrections = False
+        else:
+            self.flagScalingCorrections = True
 
         if applyDataCuts == False:
             print("WARNING: Anomolous profile fits will not be excluded from any resulting analysis or plots!")
@@ -264,11 +267,17 @@ class ProfileFitAnalysis(object):
 
                     elif self.observatoryName == "Auger":
                         scaleCorrection = 0.01 # Correction between lg(Ne) vs. lg(E) plot
-                        EeVnEMNormalization = 586908936.4969574 # zen = 0-65 deg (Auger, all zenith angles), lgE = 17.9-18.1
+                        #EeVnEMNormalization = 586908936.4969574 # zen = 0-65 deg (Auger, all zenith angles), lgE = 17.9-18.1
+                        EeVnEMNormalization = 585508499.8882083 # zen = 0-65 deg (Auger, all zenith angles), lgE = 17.9-18.1, EPOSLHCR
 
-                        Xmaxval = event.XmaxfitAndringa - (62.82 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
+                        # NOTE: Updated energy range (16.0-20.5 in lgE) for EPOSLHCR
+                        Xmaxval = event.XmaxfitAndringa - (60.02 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
                         Rval = event.RfitAndringa - (-0.03 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
-                        Lval = event.LfitAndringa - (7.47 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
+                        Lval = event.LfitAndringa - (6.44 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
+
+                        #Xmaxval = event.XmaxfitAndringa - (62.82 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
+                        #Rval = event.RfitAndringa - (-0.03 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
+                        #Lval = event.LfitAndringa - (7.47 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
 
                     if Xmaxval == np.nan or Xmaxval == np.inf or Xmaxval == -999.0:
                         print(f"Bad value found! With Xmax={event.XmaxfitAndringa}, EMatXmax={event.nEmAtXmax}")
