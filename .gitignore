@@ -1,1 +1,5 @@
+# Output plots for analysis
 plots/
+
+# Compiled python bytecode files, update after every change of files in tools/ uhhhhh
+tools/__pycache__/
