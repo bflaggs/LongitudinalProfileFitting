@@ -630,9 +630,10 @@ class ProfileFitAnalysis(object):
 
             if self.params[ipar] == r"$X_{\rm max, true}$ (g/cm$^2$)":
                 xName = "Xmax"
-                ax.text(0.74, 0.66, self.observatoryName, transform=ax.transAxes, fontsize=14)
-                ax.text(0.65, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=14)
-                ax.text(0.65, 0.55, rf"lg(E) = {self.minLgE}$-${self.maxLgE}", transform=ax.transAxes, fontsize=14)
+                ax.text(0.74, 0.66, self.observatoryName, transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.65, 0.61, "EPOS LHC-R", transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.65, 0.55, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.65, 0.49, rf"log$_{{10}}$(E / eV) = {self.minLgE}$-${self.maxLgE}", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 if self.flagCorsikaXmax == True:
                     fitInfo = "CorsikaXmax"
                 elif self.flagCorsikaXmax == False and self.flagGHFits == True:
@@ -641,27 +642,27 @@ class ProfileFitAnalysis(object):
                     fitInfo = "AndringaXmax"
             elif self.params[ipar] == r"R$_{\rm true}$":
                 xName = "Rval"
-                ax.text(0.12, 0.93, self.observatoryName, transform=ax.transAxes, fontsize=14)
-                ax.text(0.03, 0.87, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=14)
-                ax.text(0.03, 0.81, rf"lg(E) = {self.minLgE}$-${self.maxLgE}", transform=ax.transAxes, fontsize=14)
+                ax.text(0.12, 0.93, self.observatoryName, transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.03, 0.87, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.65, 0.55, rf"log$_{{10}}$(E / eV) = {self.minLgE}$-${self.maxLgE}", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 if self.flagGHFits == True:
                     fitInfo = "GHShiftedR"
                 else:
                     fitInfo = "AndringaR"
             elif self.params[ipar] == r"L$_{\rm true}$ (g/cm$^2$)":
                 xName = "Lval"
-                ax.text(0.74, 0.66, self.observatoryName, transform=ax.transAxes, fontsize=14)
-                ax.text(0.65, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=14)
-                ax.text(0.65, 0.55, rf"lg(E) = {self.minLgE}$-${self.maxLgE}", transform=ax.transAxes, fontsize=14)
+                ax.text(0.74, 0.66, self.observatoryName, transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.65, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.65, 0.55, rf"log$_{{10}}$(E / eV) = {self.minLgE}$-${self.maxLgE}", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 if self.flagGHFits == True:
                     fitInfo = "GHShiftedL"
                 else:
                     fitInfo = "AndringaL"
             elif self.params[ipar] == r"$\sigma_{X_{\rm max}}$ (g/cm$^2$)":
                 xName = "sigmaXmax"
-                ax.text(0.74, 0.66, self.observatoryName, transform=ax.transAxes, fontsize=14)
-                ax.text(0.65, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=14)
-                ax.text(0.65, 0.55, rf"lg(E) = {self.minLgE}$-${self.maxLgE}", transform=ax.transAxes, fontsize=14)
+                ax.text(0.74, 0.66, self.observatoryName, transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.65, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.65, 0.55, rf"log$_{{10}}$(E / eV) = {self.minLgE}$-${self.maxLgE}", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 if self.flagCorsikaXmax == False and self.flagGHFits == True:
                     fitInfo = "GHShiftedSigmaXmax"
                 elif self.flagCorsikaXmax == False and self.flagGHFits == False:
@@ -670,18 +671,18 @@ class ProfileFitAnalysis(object):
                     raise ValueError("There's no saved uncertainty in Xmax from the CORSIKA Gaisser-Hillas fit.")
             elif self.params[ipar] == r"$\sigma_{R}$":
                 xName = "sigmaRval"
-                ax.text(0.12, 0.93, self.observatoryName, transform=ax.transAxes, fontsize=14)
-                ax.text(0.03, 0.87, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=14)
-                ax.text(0.03, 0.81, rf"lg(E) = {self.minLgE}$-${self.maxLgE}", transform=ax.transAxes, fontsize=14)
+                ax.text(0.74, 0.66, self.observatoryName, transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.65, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.65, 0.55, rf"log$_{{10}}$(E / eV) = {self.minLgE}$-${self.maxLgE}", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 if self.flagGHFits == True:
                     fitInfo = "GHShiftedSigmaR"
                 else:
                     fitInfo = "AndringaSigmaR"
             elif self.params[ipar] == r"$\sigma_{L}$ (g/cm$^2$)":
                 xName = "sigmaLval"
-                ax.text(0.74, 0.66, self.observatoryName, transform=ax.transAxes, fontsize=14)
-                ax.text(0.65, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=14)
-                ax.text(0.65, 0.55, rf"lg(E) = {self.minLgE}$-${self.maxLgE}", transform=ax.transAxes, fontsize=14)
+                ax.text(0.74, 0.66, self.observatoryName, transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.65, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.65, 0.55, rf"log$_{{10}}$(E / eV) = {self.minLgE}$-${self.maxLgE}", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 if self.flagGHFits == True:
                     fitInfo = "GHShiftedSigmaL"
                 else:
