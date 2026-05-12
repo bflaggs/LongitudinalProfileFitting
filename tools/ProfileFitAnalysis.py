@@ -250,6 +250,8 @@ class ProfileFitAnalysis(object):
             if self.energyCorrection == True:
                 raise ValueError("The energy correction to MC energy has not been studied in detail. Need to do analysis to find correction factors and update code.")
 
+            # Does not work when making histograms of the observables with MakeHistogram()
+            # So for now, no need to update the scaling (this will bite me in the ass in the future, but just get the results quickly)
             elif self.energyProxyCorrection == True:
 
                 if self.flagGHFits == False and self.flagCorsikaXmax == False:
@@ -632,7 +634,7 @@ class ProfileFitAnalysis(object):
                 xName = "Xmax"
                 ax.text(0.80, 0.66, rf"E = 10$^{{{self.minLgE}}}-$10$^{{{self.maxLgE}}}$ eV", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.80, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=14, ha="center", va="center")
-                ax.text(0.80, 0.55, "EPOS LHC-R", transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.80, 0.55, "QGSJETIII-01", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.80, 0.49, self.observatoryName, transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 #ax.text(0.79, 0.49, rf"log$_{{10}}$(E/eV) = {self.minLgE}$-${self.maxLgE}", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 if self.flagCorsikaXmax == True:
@@ -645,7 +647,7 @@ class ProfileFitAnalysis(object):
                 xName = "Rval"
                 ax.text(0.21, 0.95, rf"E = 10$^{{{self.minLgE}}}-$10$^{{{self.maxLgE}}}$ eV", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.21, 0.89, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=14, ha="center", va="center")
-                ax.text(0.21, 0.83, "EPOS LHC-R", transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.21, 0.83, "QGSJETIII-01", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.21, 0.77, self.observatoryName, transform=ax.transAxes, fontsize=14, ha="center", va="center")                
                 if self.flagGHFits == True:
                     fitInfo = "GHShiftedR"
@@ -655,7 +657,7 @@ class ProfileFitAnalysis(object):
                 xName = "Lval"
                 ax.text(0.80, 0.66, rf"E = 10$^{{{self.minLgE}}}-$10$^{{{self.maxLgE}}}$ eV", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.80, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=14, ha="center", va="center")
-                ax.text(0.80, 0.55, "EPOS LHC-R", transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.80, 0.55, "QGSJETIII-01", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.80, 0.49, self.observatoryName, transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 if self.flagGHFits == True:
                     fitInfo = "GHShiftedL"
@@ -665,7 +667,7 @@ class ProfileFitAnalysis(object):
                 xName = "sigmaXmax"
                 ax.text(0.80, 0.66, rf"E = 10$^{{{self.minLgE}}}-$10$^{{{self.maxLgE}}}$ eV", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.80, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=14, ha="center", va="center")
-                ax.text(0.80, 0.55, "EPOS LHC-R", transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.80, 0.55, "QGSJETIII-01", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.80, 0.49, self.observatoryName, transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 if self.flagCorsikaXmax == False and self.flagGHFits == True:
                     fitInfo = "GHShiftedSigmaXmax"
@@ -677,7 +679,7 @@ class ProfileFitAnalysis(object):
                 xName = "sigmaRval"
                 ax.text(0.80, 0.66, rf"E = 10$^{{{self.minLgE}}}-$10$^{{{self.maxLgE}}}$ eV", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.80, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=14, ha="center", va="center")
-                ax.text(0.80, 0.55, "EPOS LHC-R", transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.80, 0.55, "QGSJETIII-01", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.80, 0.49, self.observatoryName, transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 if self.flagGHFits == True:
                     fitInfo = "GHShiftedSigmaR"
@@ -687,7 +689,7 @@ class ProfileFitAnalysis(object):
                 xName = "sigmaLval"
                 ax.text(0.80, 0.66, rf"E = 10$^{{{self.minLgE}}}-$10$^{{{self.maxLgE}}}$ eV", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.80, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=14, ha="center", va="center")
-                ax.text(0.80, 0.55, "EPOS LHC-R", transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.80, 0.55, "QGSJETIII-01", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.80, 0.49, self.observatoryName, transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 if self.flagGHFits == True:
                     fitInfo = "GHShiftedSigmaL"

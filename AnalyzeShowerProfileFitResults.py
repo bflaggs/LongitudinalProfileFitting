@@ -150,7 +150,7 @@ if args.makeLongFitHistograms == True:
         filename = ABS_PATH_HERE + "/plots/histograms/GHShiftedFit/" + observatory + "_LongitudinalFit" + filePrimNames + fileDataCut + \
                  f"_lgE{minLgE:.1f}_{maxLgE:.1f}_zen{minDeg:.0f}_{maxDeg:.0f}"
     else:
-        filename = ABS_PATH_HERE + "/plots/histograms/GHParameterizedFit/EPOSLHCR/" + observatory + "_LongitudinalFit" + filePrimNames + fileDataCut + \
+        filename = ABS_PATH_HERE + "/plots/histograms/GHParameterizedFit/QGSJETIII01/" + observatory + "_LongitudinalFit" + filePrimNames + fileDataCut + \
                  f"_lgE{minLgE:.1f}_{maxLgE:.1f}_zen{minDeg:.0f}_{maxDeg:.0f}"
 
     # Can fix plot range w/ fixedBins and include mean+median+mode in legend w/ calcMeanMedianMode 
