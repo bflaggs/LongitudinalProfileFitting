@@ -52,6 +52,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("input", type=str, nargs="+", default=[], help="List of CORSIKA simulation ASCII files")
 parser.add_argument("--observatory", type=str, nargs="?", required=True, default="IceCube", help="Name of observatory (either IceCube or Auger)")
+parser.add_argument("--hadronicModel", type=str, nargs="?", required=True, default="EPOS LHC-R", help="Name of hadronic model (either EPOS LHC-R, QGSJET-III.01, or Sibyll 2.3e)")
 parser.add_argument("--zenithRange", type=float, nargs=2, default=[0.0, 71.6], help="Zenith range of data to plot")
 parser.add_argument("--energyRange", type=float, nargs=2, default=[16.0, 18.5], help="lg(E) energy range of data to plot")
 parser.add_argument("--useGHShiftedFits", action="store_true", help="If set, will use the GH shifted fits in analysis (making histograms or printing poor fit numbers)")
@@ -72,17 +73,14 @@ if args.energyRange[0] >= args.energyRange[1]:
 if args.energyScaling == True and args.energyProxyScaling == True:
     raise ValueError("Can not set observables to be scaled by both the MC energy and an energy proxy (it makes no sense to do such a thing...)")
 
-if args.useGHShiftedFits == True and args.printNumberEventsToCut + args.makeLongFitHistograms == 0:
-    print("WARNING: Using the Gaisser-Hillas shifted fits does nothing unless printing to terminal the number of poor fits or making histograms.\n")
-
 if args.energyScaling == True:
     print("WARNING: Setting the observables to be scaled w.r.t. true MC energy will probably throw an error as this scaling for these observables has not been studied in detail.")
     print("Good luck :) \n")
 
-if args.energyScaling == True or args.energyProxyScaling == True:
-    print("WARNING: The observable uncertainties will not be scaled.")
-    print("You can update the code if you want to scale them, but it requires studying how the uncertainties vary w/ energy.\n")
-    # Since these uncertainties are taken from a simply scipy.curve_fit then I don't know if they will depend on energy. But it would be interesting to see...
+if args.energyProxyScaling == True and args.useGHShiftedFits == True:
+    print("WARNING: Observable scaling not implemented for the GH shifted fits!")
+    print("Edit the class to implement this. Will require studying their scaling w.r.t. energy and energy proxy.\n")
+    raise ValueError("Options not possible, check warnings.")
 
 minDeg = args.zenithRange[0]
 maxDeg = args.zenithRange[1]
@@ -108,6 +106,19 @@ elif flagEnergyProxyScale == True:
 else:
     fileDataCut = fileDataCut
 
+modelName = str(args.hadronicModel)
+modelNameFile = modelName.replace(" ", "")
+
+# For saving the plots in their respective model directories (for next gen hadronic models)
+if modelName == "EPOS LHC-R":
+    modelDir = "EPOSLHCR"
+elif modelName == "QGSJETIII-01":
+    modelDir = "QGSJETIII01"
+elif modelName == "Sibyll 2.3e":
+    modelDir = "SIBYLL23e"
+else:
+    raise ValueError("Model name not recognized. Check spelling of modelName variable.")
+
 # Can add keywords used to investigate only certain primaries
 # I had them here but removed them because didn't think it was necessary at the moment as one can just read in the primaries they want
 filePrimNames = ""
@@ -116,7 +127,8 @@ analysis = ProfileFitAnalysis(minDeg=minDeg, maxDeg=maxDeg, minLgE=minLgE, maxLg
                               includeXmax=True, includeRval=True, includeLval=True,
                               includeSigmas=True, useGHFits=flagGHShiftedFits, useCorsikaXmax=False,
                               energyScaling=flagEnergyScale, energyProxyScaling=flagEnergyProxyScale, applyDataCuts=flagDataCut,
-                              observatory=observatory, useLargerSmearValues=False, singleObservable=False, smearVal=0.0)
+                              observatory=observatory, useLargerSmearValues=False, singleObservable=False,
+                              smearVal=0.0, hadronicModel=modelName)
 
 for file in args.input:
     analysis.ReadSingleFile(file)
@@ -124,11 +136,11 @@ for file in args.input:
 analysis.GetValues()
 
 if args.useGHShiftedFits == True:
-    filenameQuant = ABS_PATH_HERE + "/plots/quantiles/GHShiftedFit/QGSJETIII01/" + observatory + filePrimNames + fileDataCut
-    filename = ABS_PATH_HERE + "/plots/violin/GHShiftedFit/QGSJETIII01/" + observatory + filePrimNames + fileDataCut
+    filenameQuant = ABS_PATH_HERE + "/plots/quantiles/GHShiftedFit/" + modelDir + "/" + observatory + filePrimNames + fileDataCut
+    filename = ABS_PATH_HERE + "/plots/violin/GHShiftedFit/" + modelDir + "/" + observatory + filePrimNames + fileDataCut
 else:
-    filenameQuant = ABS_PATH_HERE + "/plots/quantiles/QGSJETIII01/" + observatory + filePrimNames + fileDataCut
-    filename = ABS_PATH_HERE + "/plots/violin/QGSJETIII01/" + observatory + filePrimNames + fileDataCut
+    filenameQuant = ABS_PATH_HERE + "/plots/quantiles/" + modelDir + "/" + observatory + filePrimNames + fileDataCut
+    filename = ABS_PATH_HERE + "/plots/violin/" + modelDir + "/" + observatory + filePrimNames + fileDataCut
 
     # Test making quantile and violin plots, only for the parameterized fits for now 
     analysis.MakeQuantileEvolutionMaps(filenameQuant)

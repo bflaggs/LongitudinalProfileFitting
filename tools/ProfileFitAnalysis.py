@@ -40,7 +40,8 @@ class ProfileFitAnalysis(object):
                  includeXmax=False, includeRval=False, includeLval=False,
                  includeSigmas=False, useGHFits=False, useCorsikaXmax=False,
                  energyScaling=False, energyProxyScaling=True, applyDataCuts=False,
-                 observatory="IceCube", useLargerSmearValues=False, singleObservable=False, smearVal=0.0): 
+                 observatory="IceCube", useLargerSmearValues=False, singleObservable=False,
+                 smearVal=0.0, hadronicModel="EPOS LHC-R"): 
 
         # ====================================================================== #
         # Error handling for if conflicting keywords are set + Warnings for user #
@@ -86,6 +87,8 @@ class ProfileFitAnalysis(object):
         self.flagDataCuts = applyDataCuts
         self.flagLargeSmearUncerts = useLargerSmearValues
         self.flagSingleObservable = singleObservable
+
+        self.hadronicModel = hadronicModel
 
 
         self.primaryNames = {"2212": "Proton", "1000020040": "Helium", "1000080160": "Oxygen", "1000260560": "Iron"}
@@ -275,18 +278,33 @@ class ProfileFitAnalysis(object):
                         Lval = event.LfitAndringa - (7.18 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
 
                     elif self.observatoryName == "Auger":
-                        scaleCorrection = 0.01 # Correction between lg(Ne) vs. lg(E) plot
-                        #EeVnEMNormalization = 586908936.4969574 # zen = 0-65 deg (Auger, all zenith angles), lgE = 17.9-18.1
-                        EeVnEMNormalization = 585508499.8882083 # zen = 0-65 deg (Auger, all zenith angles), lgE = 17.9-18.1, EPOSLHCR
+                        if self.hadronicModel == "EPOS LHC-R":
+                            scaleCorrection = 0.01 # Correction between lg(Ne) vs. lg(E) plot
+                            EeVnEMNormalization = 585508499.8882083 # zen = 0-65 deg (Auger, all zenith angles), lgE = 17.9-18.1, EPOSLHCR
+                            # NOTE: Updated energy range (16.0-20.5 in lgE) for EPOSLHCR
+                            Xmaxval = event.XmaxfitAndringa - (60.02 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
+                            Rval = event.RfitAndringa - (-0.03 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
+                            Lval = event.LfitAndringa - (6.44 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
+                        
+                        elif self.hadronicModel == "Sibyll 2.3e":
+                            scaleCorrection = 0.00 # Correction between lg(Ne) vs. lg(E) plot, note different for Sibyll 2.3e!!!
+                            EeVnEMNormalization = 619514957.1267722 # zen = 0-65 deg (Auger, all zenith angles), lgE = 17.9-18.1, Sibyll23e
+                            # NOTE: Updated energy range (16.0-20.5 in lgE) for Sibyll23e
+                            Xmaxval = event.XmaxfitAndringa - (60.71 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
+                            Rval = event.RfitAndringa - (-0.03 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
+                            Lval = event.LfitAndringa - (7.75 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
+                        
+                        elif self.hadronicModel == "QGSJETIII-01":
+                            scaleCorrection = 0.01 # Correction between lg(Ne) vs. lg(E) plot
+                            EeVnEMNormalization = 621701443.5937785 # zen = 0-65 deg (Auger, all zenith angles), lgE = 17.9-18.1, QGSJETIII01
+                            # NOTE: Updated energy range (16.0-20.5 in lgE) for QGSJETIII01
+                            Xmaxval = event.XmaxfitAndringa - (58.17 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
+                            Rval = event.RfitAndringa - (-0.03 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
+                            Lval = event.LfitAndringa - (6.28 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
+    
+                        else:
+                            raise ValueError("Hadronic model not implemented. Options are EPOS LHC-R, QGSJETIII-01, and Sibyll 2.3e. Check spelling :)")
 
-                        # NOTE: Updated energy range (16.0-20.5 in lgE) for EPOSLHCR
-                        Xmaxval = event.XmaxfitAndringa - (60.02 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
-                        Rval = event.RfitAndringa - (-0.03 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
-                        Lval = event.LfitAndringa - (6.44 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
-
-                        #Xmaxval = event.XmaxfitAndringa - (62.82 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
-                        #Rval = event.RfitAndringa - (-0.03 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
-                        #Lval = event.LfitAndringa - (7.47 + scaleCorrection)*np.log10(event.nEmAtXmax / EeVnEMNormalization)
 
                     if Xmaxval == np.nan or Xmaxval == np.inf or Xmaxval == -999.0:
                         print(f"Bad value found! With Xmax={event.XmaxfitAndringa}, EMatXmax={event.nEmAtXmax}")
@@ -713,7 +731,7 @@ class ProfileFitAnalysis(object):
                 xName = "Xmax"
                 ax.text(0.80, 0.66, rf"E = 10$^{{{self.minLgE}}}-$10$^{{{self.maxLgE}}}$ eV", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.80, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=14, ha="center", va="center")
-                ax.text(0.80, 0.55, "QGSJETIII-01", transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.80, 0.55, self.hadronicModel, transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.80, 0.49, self.observatoryName, transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 #ax.text(0.79, 0.49, rf"log$_{{10}}$(E/eV) = {self.minLgE}$-${self.maxLgE}", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 if self.flagCorsikaXmax == True:
@@ -726,7 +744,7 @@ class ProfileFitAnalysis(object):
                 xName = "Rval"
                 ax.text(0.21, 0.95, rf"E = 10$^{{{self.minLgE}}}-$10$^{{{self.maxLgE}}}$ eV", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.21, 0.89, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=14, ha="center", va="center")
-                ax.text(0.21, 0.83, "QGSJETIII-01", transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.21, 0.83, self.hadronicModel, transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.21, 0.77, self.observatoryName, transform=ax.transAxes, fontsize=14, ha="center", va="center")                
                 if self.flagGHFits == True:
                     fitInfo = "GHShiftedR"
@@ -736,7 +754,7 @@ class ProfileFitAnalysis(object):
                 xName = "Lval"
                 ax.text(0.80, 0.66, rf"E = 10$^{{{self.minLgE}}}-$10$^{{{self.maxLgE}}}$ eV", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.80, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=14, ha="center", va="center")
-                ax.text(0.80, 0.55, "QGSJETIII-01", transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.80, 0.55, self.hadronicModel, transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.80, 0.49, self.observatoryName, transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 if self.flagGHFits == True:
                     fitInfo = "GHShiftedL"
@@ -746,7 +764,7 @@ class ProfileFitAnalysis(object):
                 xName = "sigmaXmax"
                 ax.text(0.80, 0.66, rf"E = 10$^{{{self.minLgE}}}-$10$^{{{self.maxLgE}}}$ eV", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.80, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=14, ha="center", va="center")
-                ax.text(0.80, 0.55, "QGSJETIII-01", transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.80, 0.55, self.hadronicModel, transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.80, 0.49, self.observatoryName, transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 if self.flagCorsikaXmax == False and self.flagGHFits == True:
                     fitInfo = "GHShiftedSigmaXmax"
@@ -758,7 +776,7 @@ class ProfileFitAnalysis(object):
                 xName = "sigmaRval"
                 ax.text(0.80, 0.66, rf"E = 10$^{{{self.minLgE}}}-$10$^{{{self.maxLgE}}}$ eV", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.80, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=14, ha="center", va="center")
-                ax.text(0.80, 0.55, "QGSJETIII-01", transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.80, 0.55, self.hadronicModel, transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.80, 0.49, self.observatoryName, transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 if self.flagGHFits == True:
                     fitInfo = "GHShiftedSigmaR"
@@ -768,7 +786,7 @@ class ProfileFitAnalysis(object):
                 xName = "sigmaLval"
                 ax.text(0.80, 0.66, rf"E = 10$^{{{self.minLgE}}}-$10$^{{{self.maxLgE}}}$ eV", transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.80, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=14, ha="center", va="center")
-                ax.text(0.80, 0.55, "QGSJETIII-01", transform=ax.transAxes, fontsize=14, ha="center", va="center")
+                ax.text(0.80, 0.55, self.hadronicModel, transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 ax.text(0.80, 0.49, self.observatoryName, transform=ax.transAxes, fontsize=14, ha="center", va="center")
                 if self.flagGHFits == True:
                     fitInfo = "GHShiftedSigmaL"
