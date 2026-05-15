@@ -392,7 +392,56 @@ class ProfileFitAnalysis(object):
         return xBins, yBins, counts, countsNorm, t_contours
 
 
-    def MakeContourPlots(self, filename, showRawHistograms=False):
+    def GetContourLimits(self):
+        """
+        Computes contour plot limits and nBins for all parameter pairs
+        from the currently loaded data. Should be called on a class instance
+        with allfourPrimaries=True to ensure globally consistent limits.
+        Returns a dict keyed by (paramPlotName_x, paramPlotName_y).
+        """
+        contourLimits = {}
+
+        for ipar in range(len(self.params)):
+            for jpar in range(ipar + 1, len(self.params)):
+
+                globalMinX =  1e100
+                globalMaxX = -1e100
+                globalMinY =  1e100
+                globalMaxY = -1e100
+                nBins = 10
+
+                for primkey in self.data.keys():
+                    prim = self.data[primkey]
+                    if not len(prim[ipar]) or not len(prim[jpar]):
+                        continue
+                    globalMinX = min(globalMinX, min(prim[ipar]))
+                    globalMaxX = max(globalMaxX, max(prim[ipar]))
+                    globalMinY = min(globalMinY, min(prim[jpar]))
+                    globalMaxY = max(globalMaxY, max(prim[jpar]))
+                    nBins = max(nBins, int(np.sqrt(len(prim[ipar])) * 0.66))
+
+                dX = abs(globalMaxX - globalMinX)
+                globalMinX -= dX * 0.1
+                globalMaxX += dX * 0.1
+                dY = abs(globalMaxY - globalMinY)
+                globalMinY -= dY * 0.1
+                globalMaxY += dY * 0.1
+
+                xParamName = self.plotNames[ipar]
+                yParamName = self.plotNames[jpar]
+
+                contourLimits[(xParamName, yParamName)] = {
+                    "minX":  globalMinX,
+                    "maxX":  globalMaxX,
+                    "minY":  globalMinY,
+                    "maxY":  globalMaxY,
+                    "nBins": nBins,
+                }
+
+        return contourLimits
+
+
+    def MakeContourPlots(self, filename, showRawHistograms=False, contourLimits=None):
 
         fileSplit = filename.rsplit("/", 1)
         fileNameString = fileSplit[-1].rsplit(".", 1)
@@ -415,30 +464,45 @@ class ProfileFitAnalysis(object):
 
                 print("Comparing", self.params[ipar], "and", self.params[jpar])
 
-                minX = 1e100
-                maxX = -1e100
-                minY = 1e100
-                maxY = -1e100
+                xParamName = self.plotNames[ipar]
+                yParamName = self.plotNames[jpar]
 
-                nBins = 10
+                # Use precomputed limits from all-primary class call if provided
+                if contourLimits is not None and (xParamName, yParamName) in contourLimits:
+                    lim   = contourLimits[(xParamName, yParamName)]
+                    minX  = lim["minX"]
+                    maxX  = lim["maxX"]
+                    minY  = lim["minY"]
+                    maxY  = lim["maxY"]
+                    nBins = lim["nBins"]
 
-                for primkey in self.data.keys():
-                    prim = self.data[primkey]
-                    if not len(prim[ipar]):
-                        print("Primary", primkey, "has no entries for", self.params[ipar])
-                        continue
-                    minX = min([minX, min(prim[ipar])])
-                    maxX = max([maxX, max(prim[ipar])])
-                    minY = min([minY, min(prim[jpar])])
-                    maxY = max([maxY, max(prim[jpar])])
-                    nBins = int(np.sqrt(len(prim[ipar])) * 0.66)
+                else:
+                    minX = 1e100
+                    maxX = -1e100
+                    minY = 1e100
+                    maxY = -1e100
 
-                dX = abs(minX - maxX)
-                minX -= dX * 0.1
-                maxX += dX * 0.1
-                dY = abs(minY - maxY)
-                minY -= dY * 0.1
-                maxY += dY * 0.1
+                    nBins = 10
+
+                    for primkey in self.data.keys():
+                        prim = self.data[primkey]
+                        if not len(prim[ipar]):
+                            print("Primary", primkey, "has no entries for", self.params[ipar])
+                            continue
+                        minX = min([minX, min(prim[ipar])])
+                        maxX = max([maxX, max(prim[ipar])])
+                        minY = min([minY, min(prim[jpar])])
+                        maxY = max([maxY, max(prim[jpar])])
+                        nBins = int(np.sqrt(len(prim[ipar])) * 0.66)
+
+                    dX = abs(minX - maxX)
+                    minX -= dX * 0.1
+                    maxX += dX * 0.1
+                    dY = abs(minY - maxY)
+                    minY -= dY * 0.1
+                    maxY += dY * 0.1
+
+                print(f"minX, maxX, minY, maxY for {xParamName} vs. {yParamName} are: {minX:.2f}, {maxX:.2f}, {minY:.2f}, {maxY:.2f} with nBins = {nBins}")
 
                 xBins = np.linspace(minX, maxX, nBins)
                 yBins = np.linspace(minY, maxY, nBins)
@@ -463,11 +527,14 @@ class ProfileFitAnalysis(object):
 
                     for isig in range(len(self.sigmas)):
                         for p in cs.collections[len(self.sigmas) - 1 - isig].get_paths():
-                            v = p.vertices
-                            x = v[:, 0]
-                            y = v[:, 1]
+                            # Get the polygons and loop through them to get all the contours, including islands!
+                            polys = p.to_polygons()
 
-                            points[iprim][isig].append([x, y])
+                            for poly in polys:
+                                x = poly[:, 0]
+                                y = poly[:, 1]
+
+                                points[iprim][isig].append([x, y])
 
                 style = ["-", "--", ":"]
 
