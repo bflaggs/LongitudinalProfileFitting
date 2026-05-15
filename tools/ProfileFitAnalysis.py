@@ -119,9 +119,15 @@ class ProfileFitAnalysis(object):
         if singleObservable == True and len(self.params) != 1:
             raise ValueError("'singleObservable' keyword is set but the more than one observable was passed to the observables list.")
 
+        # Energy and zenith stored for making violin plots later
+        self.energy = {}
+        self.zenith = {}
+
         self.data = {}
         for key in self.primaryNames.keys():
             self.data[self.primaryNames[key]] = [[] for i in range(len(self.params))]
+            self.energy[self.primaryNames[key]] = []
+            self.zenith[self.primaryNames[key]] = []
 
         self.sigmas = [0.9, 0.68]  # Contour line definitions (solely used for contour plots)
 
@@ -236,6 +242,7 @@ class ProfileFitAnalysis(object):
                 elif event.RfitAndringa < 0.0:  # Maybe also include a cut on L values? (i.e. L < 350 or L < 325???)
                     continue
 
+            # Both in radians
             zen = event.zenith
             azi = event.azimuth
 
@@ -245,7 +252,7 @@ class ProfileFitAnalysis(object):
 
             name = self.primaryNames[str(event.primary)]
 
-            energy = event.energy
+            energy = event.energy  # In GeV
 
             if self.energyCorrection == True:
                 raise ValueError("The energy correction to MC energy has not been studied in detail. Need to do analysis to find correction factors and update code.")
@@ -332,12 +339,17 @@ class ProfileFitAnalysis(object):
             for ival, val in enumerate(vals):
                 self.data[name][ival].append(val)
 
+            # Store log10(energy) and zenith in degrees per event for making violin plots later
+            self.energy[name].append(np.log10(energy * 1e9))
+            self.zenith[name].append(zen * 180.0 / np.pi)
 
             prevZen = zen
             prevAzi = azi
 
         # Convert to number arrays for later
         for key in self.data.keys():
+            self.energy[key] = np.array(self.energy[key])
+            self.zenith[key] = np.array(self.zenith[key])
             for i in range(len(self.data[key])):
                 self.data[key][i] = np.array(self.data[key][i])
 
