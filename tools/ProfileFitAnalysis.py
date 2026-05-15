@@ -1199,3 +1199,172 @@ class ProfileFitAnalysis(object):
                 print(f"Events to be Cut From Analysis (NOT including failed CORSIKA fits) for {prim}: {eventsToBeCut}")
 
 
+    #########################################################################################################################
+    # The class functions here were added specifically to visualize the distributions of the shower profile fit observables # 
+    #########################################################################################################################
+
+    def MakeQuantileEvolutionMaps(self, filename):
+
+        zenithBins = [(0.0,20.0), (20.0,40.0), (40.0,50.0), (50.0,60.0)]
+        energyBins = np.arange(16.0, 20.5 + 0.5, 0.5)
+
+        nRows = len(self.primaryNames)
+        nCols = 3
+
+        for ipar in range(len(self.params)):
+
+            fig = plt.figure(figsize=(18, 4*nRows))
+
+            gs = gridspec.GridSpec(nRows, nCols, wspace=0.30, hspace=0.35)
+
+            for iprim, prim in enumerate(self.data.keys()):
+
+                observable = self.data[prim][ipar]
+                lgE = self.energy[prim]
+                zenith = self.zenith[prim]
+
+                medianMap = np.full((len(zenithBins), len(energyBins)-1), np.nan)
+
+                widthMap = np.full_like(medianMap, np.nan)
+                tailMap = np.full_like(medianMap, np.nan)
+
+                for iz, (zmin, zmax) in enumerate(zenithBins):
+
+                    for ie in range(len(energyBins)-1):
+
+                        emin = energyBins[ie]
+                        emax = energyBins[ie+1]
+
+                        cut = (
+                            (zenith >= zmin) &
+                            (zenith < zmax) &
+                            (lgE >= emin) &
+                            (lgE < emax)
+                        )
+
+                        vals = observable[cut]
+
+                        vals = vals[vals != -999.0]
+
+                        if len(vals) < 10:
+                            continue
+
+                        q05, q16, q50, q84, q95 = np.percentile(
+                            vals,
+                            [5,16,50,84,95]
+                        )
+
+                        medianMap[iz, ie] = q50
+
+                        widthMap[iz, ie] = q84 - q16
+
+                        denom = q50 - q05
+
+                        if denom > 0:
+                            tailMap[iz, ie] = (q95 - q50)/denom
+
+                mapList = [medianMap, widthMap, tailMap]
+
+                titleList = [
+                    f"{prim}: Median",
+                    f"{prim}: 68% Width",
+                    f"{prim}: Tail Asymmetry"
+                ]
+
+                for icol in range(3):
+
+                    ax = fig.add_subplot(gs[iprim, icol])
+
+                    im = ax.imshow(mapList[icol], origin='lower', aspect='auto',
+                                   extent=[energyBins[0], energyBins[-1], 0, len(zenithBins)])
+
+                    ax.set_xticks(np.arange(16, 21, 0.5))
+                    ax.set_yticks(np.arange(len(zenithBins)) + 0.5)
+
+                    ax.set_yticklabels([
+                        r"0$^\circ$-20$^\circ$",
+                        r"20$^\circ$-40$^\circ$",
+                        r"40$^\circ$-50$^\circ$",
+                        r"50$^\circ$-60$^\circ$"
+                    ])
+
+                    ax.set_xlabel(r'log$_{10}$(E/eV)')
+                    ax.set_ylabel(r'$\theta_{\rm zen}$')
+                    ax.set_title(titleList[icol])
+                    ax.tick_params(direction="in", which="both", axis="both")
+
+                    cbar = plt.colorbar(im, ax=ax)
+                    cbar.ax.tick_params(direction='in')
+
+            fig.suptitle(self.params[ipar], fontsize=18)
+
+            fileToSave = filename + "_QuantileEvolution_" + self.plotNames[ipar] + ".pdf"
+
+            fig.savefig(fileToSave, bbox_inches="tight")
+
+            print("Saved", fileToSave)
+
+
+    def MakeViolinPlots(self, filename):
+
+        zenithBins = [(0.0,20.0), (20.0,40.0), (40.0,50.0), (50.0,60.0)]
+        energyBins = np.arange(16.0, 20.5 + 0.5, 0.5)
+        energyCenters = 0.5*(energyBins[:-1] + energyBins[1:])
+
+        for ipar in range(len(self.params)):
+            for iprim, prim in enumerate(self.data.keys()):
+
+                observable = self.data[prim][ipar]
+                lgE = self.energy[prim]
+                zenith = self.zenith[prim]
+
+                fig, axes = plt.subplots(len(zenithBins), 1, figsize=(14, 12), sharex=True)
+
+                for iz, (zmin, zmax) in enumerate(zenithBins):
+
+                    ax = axes[iz]
+                    violinData = []
+
+                    for ie in range(len(energyBins)-1):
+
+                        emin = energyBins[ie]
+                        emax = energyBins[ie+1]
+
+                        cut = (
+                            (zenith >= zmin) &
+                            (zenith < zmax) &
+                            (lgE >= emin) &
+                            (lgE < emax)
+                        )
+
+                        vals = observable[cut]
+                        vals = vals[vals != -999.0]
+                        violinData.append(vals)
+
+                    parts = ax.violinplot(
+                        violinData,
+                        positions=energyCenters,
+                        widths=0.35,
+                        showmeans=False,
+                        showmedians=True,
+                        showextrema=False
+                    )
+
+                    for pc in parts['bodies']:
+                        pc.set_facecolor(self.primaryColors[iprim])
+                        pc.set_alpha(0.5)
+
+                    parts['cmedians'].set_color('black')
+
+                    ax.set_ylabel(self.params[ipar])
+                    ax.text(0.03, 0.93, rf'$\theta_{{\rm zen}} = {zmin}^\circ-{zmax}^\circ$', transform=ax.transAxes, fontsize=18)
+                    ax.tick_params(direction="in", which="both", axis="both")
+
+                axes[-1].set_xlabel(r'log$_{10}$(E/eV)')
+
+                fig.suptitle(f"{prim} — {self.params[ipar]}", fontsize=18)
+
+                fileToSave = (filename + "_Violin_" + prim + "_" + self.plotNames[ipar] + ".pdf")
+                fig.savefig(fileToSave, bbox_inches="tight")
+
+                print("Saved", fileToSave)
