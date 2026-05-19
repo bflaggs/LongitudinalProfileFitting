@@ -143,6 +143,7 @@ else:
     filename = ABS_PATH_HERE + "/plots/violin/" + modelDir + "/" + observatory + filePrimNames + fileDataCut
 
     # Test making quantile and violin plots, only for the parameterized fits for now 
-    analysis.MakeQuantileEvolutionMaps(filenameQuant)
-    analysis.MakeViolinPlots(filename)
+    #analysis.MakeQuantileEvolutionMaps(filenameQuant)
+    #analysis.MakeViolinPlots(filename)
+    analysis.MakeViolinPlots(filename, protonHeliumOnly=True)
 

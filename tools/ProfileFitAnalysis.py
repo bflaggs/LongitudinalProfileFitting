@@ -1233,7 +1233,7 @@ class ProfileFitAnalysis(object):
 
             fig = plt.figure(figsize=(18, 4*nRows))
 
-            gs = gridspec.GridSpec(nRows, nCols, wspace=0.30, hspace=0.35)
+            gs = gridspec.GridSpec(nRows, nCols, wspace=0.55, hspace=0.6)
 
             for iprim, prim in enumerate(self.data.keys()):
 
@@ -1310,6 +1310,7 @@ class ProfileFitAnalysis(object):
                     ax.set_ylabel(r'$\theta_{\rm zen}$')
                     ax.set_title(titleList[icol])
                     ax.tick_params(direction="in", which="both", axis="both")
+                    ax.tick_params(axis='x', labelrotation=45)
 
                     cbar = plt.colorbar(im, ax=ax)
                     cbar.ax.tick_params(direction='in')
@@ -1323,25 +1324,47 @@ class ProfileFitAnalysis(object):
             print("Saved", fileToSave)
 
 
-    def MakeViolinPlots(self, filename):
+    def MakeViolinPlots(self, filename, protonHeliumOnly=False):
 
         zenithBins = [(0.0,20.0), (20.0,40.0), (40.0,50.0), (50.0,60.0)]
         energyBins = np.arange(16.0, 20.5 + 0.5, 0.5)
         energyCenters = 0.5*(energyBins[:-1] + energyBins[1:])
 
+        if protonHeliumOnly == True:
+            selectedPrimaries = ['Proton', 'Helium']
+        else:
+            selectedPrimaries = list(self.data.keys())
+
+        nPrimaries = len(selectedPrimaries)
+
+        # Set violin widths and offsets for each primary
+        groupWidth = 0.4
+        violinWidth = (groupWidth / 2) * 0.95
+        offsets = np.linspace(-groupWidth/2, groupWidth/2, nPrimaries)
+        #violinWidth = (groupWidth / nPrimaries) * 0.95
+        #offsets = np.linspace(-groupWidth/2 + violinWidth/2, groupWidth/2 - violinWidth/2, nPrimaries)
+
         for ipar in range(len(self.params)):
-            for iprim, prim in enumerate(self.data.keys()):
 
-                observable = self.data[prim][ipar]
-                lgE = self.energy[prim]
-                zenith = self.zenith[prim]
+            #fig, axes = plt.subplots(len(zenithBins), 1, figsize=(15, 12), sharex=True)
 
-                fig, axes = plt.subplots(len(zenithBins), 1, figsize=(14, 12), sharex=True)
+            # Set to list if only one zenith bin to avoid issues over zenith bin loop
+            #if len(zenithBins) == 1:
+            #    axes = [axes]
 
-                for iz, (zmin, zmax) in enumerate(zenithBins):
+            for iz, (zmin, zmax) in enumerate(zenithBins):
+                #ax = axes[iz]
 
-                    ax = axes[iz]
+                fig, ax = plt.subplots(figsize=(15, 5.5))
+
+                for iprim, prim in enumerate(selectedPrimaries):
+
+                    observable = self.data[prim][ipar]
+                    lgE = self.energy[prim]
+                    zenith = self.zenith[prim]
+                
                     violinData = []
+                    q90vals = []
 
                     for ie in range(len(energyBins)-1):
 
@@ -1359,30 +1382,91 @@ class ProfileFitAnalysis(object):
                         vals = vals[vals != -999.0]
                         violinData.append(vals)
 
+                        # Get 90th percentile value, for studying tail behavior
+                        if len(vals) > 0:
+                            q90 = np.percentile(vals, 90)
+                        else:
+                            q90 = np.nan
+
+                        q90vals.append(q90)
+
+                    positions = (energyCenters + offsets[iprim])
+
                     parts = ax.violinplot(
                         violinData,
-                        positions=energyCenters,
-                        widths=0.35,
+                        positions=positions,
+                        widths=violinWidth,
                         showmeans=False,
                         showmedians=True,
-                        showextrema=False
+                        showextrema=True
                     )
 
                     for pc in parts['bodies']:
                         pc.set_facecolor(self.primaryColors[iprim])
-                        pc.set_alpha(0.5)
+                        pc.set_edgecolor('black')
+                        pc.set_alpha(0.45)
+                        pc.set_linewidth(0.7)
 
-                    parts['cmedians'].set_color('black')
+                    parts['cbars'].set_color(self.primaryColors[iprim])
 
-                    ax.set_ylabel(self.params[ipar])
-                    ax.text(0.03, 0.93, rf'$\theta_{{\rm zen}} = {zmin}^\circ-{zmax}^\circ$', transform=ax.transAxes, fontsize=18)
-                    ax.tick_params(direction="in", which="both", axis="both")
+                    parts['cmedians'].set_color(self.primaryColors[iprim])
+                    parts['cmedians'].set_linewidth(1.5)
 
-                axes[-1].set_xlabel(r'log$_{10}$(E/eV)')
+                    parts['cmaxes'].set_color(self.primaryColors[iprim])
+                    parts['cmaxes'].set_linestyle('dashed')
+                    parts['cmaxes'].set_linewidth(1.0)
 
-                fig.suptitle(f"{prim} — {self.params[ipar]}", fontsize=18)
+                    parts['cmins'].set_visible(False)
 
-                fileToSave = (filename + "_Violin_" + prim + "_" + self.plotNames[ipar] + ".pdf")
+                    # Plot the 90th percentile values
+                    for xpos, q90 in zip(positions, q90vals):
+
+                        if np.isnan(q90):
+                            continue
+
+                        # short horizontal dotted segment
+                        ax.plot([xpos - violinWidth*0.35, xpos + violinWidth*0.35], [q90, q90],
+                                linestyle=':', linewidth=3, color=self.primaryColors[iprim], zorder=5)
+
+                        # star marker
+                        ax.plot(xpos, q90, marker='*', markersize=10, color=self.primaryColors[iprim],
+                                markeredgecolor='black', zorder=6)
+
+                ax.set_ylabel(self.params[ipar])
+                ax.set_xlabel(r'log$_{10}$(E/eV)')
+                ax.set_xticks(np.arange(16, 21, 0.5))
+                ax.tick_params(direction="in", which="both", axis="both")
+                ax.yaxis.set_ticks_position("both")
+                ax.xaxis.set_ticks_position("both")
+
+                if self.params[ipar] == r"L$_{\rm true}$ (g/cm$^2$)" or self.params[ipar] == r"L (g/cm$^2$)":
+                    ax.set_ylim(170, 450)
+
+                ax.text(0.03, 0.93, rf'$\theta_{{\rm zen}} = {zmin}^\circ-{zmax}^\circ$', transform=ax.transAxes, fontsize=18)
+
+                for edge in energyBins:
+                    ax.axvline(edge, color='gray', linestyle=':', linewidth=0.5, alpha=0.5, zorder=0)
+
+                legendHandles = []
+                for iprim, prim in enumerate(selectedPrimaries):
+
+                    handle = plt.Line2D([], [], color=self.primaryColors[iprim], lw=4, alpha=0.45, label=prim)
+                    legendHandles.append(handle)
+
+                # 90% quantile legend entry
+                q90handle = plt.Line2D([], [], color='black', linestyle=':', linewidth=3,
+                                       marker='*', markersize=10, label='90% Quantile')
+                
+                legendHandles.append(q90handle)
+
+                ax.legend(handles=legendHandles, loc='upper right', fontsize=12)
+                
+                fig.suptitle(self.params[ipar], fontsize=18)
+
+                if protonHeliumOnly == True:
+                    fileToSave = (filename + "_Violin_ProtonHeliumOnly_" + self.plotNames[ipar] + f"_Zenith_{zmin:.0f}_{zmax:.0f}.pdf")
+                else:                
+                    fileToSave = (filename + "_Violin_AllPrimaries_" + self.plotNames[ipar] + f"_Zenith_{zmin:.0f}_{zmax:.0f}.pdf")
+                
                 fig.savefig(fileToSave, bbox_inches="tight")
-
                 print("Saved", fileToSave)
