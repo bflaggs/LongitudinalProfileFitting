@@ -1332,13 +1332,17 @@ class ProfileFitAnalysis(object):
 
         if protonHeliumOnly == True:
             selectedPrimaries = ['Proton', 'Helium']
+            groupWidth = 0.2
+            q90_width_factor = 1.0
         else:
             selectedPrimaries = list(self.data.keys())
+            groupWidth = 0.4
+            q90_width_factor = 0.35
 
         nPrimaries = len(selectedPrimaries)
 
         # Set violin widths and offsets for each primary
-        groupWidth = 0.4
+        #groupWidth = 0.4
         violinWidth = (groupWidth / 2) * 0.95
         offsets = np.linspace(-groupWidth/2, groupWidth/2, nPrimaries)
         #violinWidth = (groupWidth / nPrimaries) * 0.95
@@ -1410,13 +1414,15 @@ class ProfileFitAnalysis(object):
                     parts['cbars'].set_color(self.primaryColors[iprim])
 
                     parts['cmedians'].set_color(self.primaryColors[iprim])
-                    parts['cmedians'].set_linewidth(1.5)
+                    parts['cmedians'].set_linewidth(3.0)
 
                     parts['cmaxes'].set_color(self.primaryColors[iprim])
                     parts['cmaxes'].set_linestyle('dashed')
                     parts['cmaxes'].set_linewidth(1.0)
 
-                    parts['cmins'].set_visible(False)
+                    parts['cmins'].set_color(self.primaryColors[iprim])
+                    parts['cmins'].set_linestyle('dashed')
+                    parts['cmins'].set_linewidth(1.0)
 
                     # Plot the 90th percentile values
                     for xpos, q90 in zip(positions, q90vals):
@@ -1425,8 +1431,8 @@ class ProfileFitAnalysis(object):
                             continue
 
                         # short horizontal dotted segment
-                        ax.plot([xpos - violinWidth*0.35, xpos + violinWidth*0.35], [q90, q90],
-                                linestyle=':', linewidth=3, color=self.primaryColors[iprim], zorder=5)
+                        ax.plot([xpos - violinWidth * q90_width_factor, xpos + violinWidth * q90_width_factor],
+                                [q90, q90], linestyle=':', linewidth=3, color=self.primaryColors[iprim], zorder=5)
 
                         # star marker
                         ax.plot(xpos, q90, marker='*', markersize=10, color=self.primaryColors[iprim],
@@ -1441,27 +1447,41 @@ class ProfileFitAnalysis(object):
 
                 if self.params[ipar] == r"L$_{\rm true}$ (g/cm$^2$)" or self.params[ipar] == r"L (g/cm$^2$)":
                     ax.set_ylim(170, 450)
+                    legend_loc = 'upper right'
+                elif self.params[ipar] == r"$X_{\rm max, true}$ (g/cm$^2$)" or self.params[ipar] == r"$X_{\rm max}$ (g/cm$^2$)":
+                    ax.set_ylim(500, 1200)
+                    legend_loc = 'lower right'
+                elif self.params[ipar] == r"R$_{\rm true}$" or self.params[ipar] == "R":
+                    ax.set_ylim(0.0, 0.5)
+                    legend_loc = 'lower right'
 
                 ax.text(0.03, 0.93, rf'$\theta_{{\rm zen}} = {zmin}^\circ-{zmax}^\circ$', transform=ax.transAxes, fontsize=18)
+                ax.text(0.35, 0.93, f'{self.hadronicModel}', fontweight='bold', transform=ax.transAxes, fontsize=18)
 
                 for edge in energyBins:
-                    ax.axvline(edge, color='gray', linestyle=':', linewidth=0.5, alpha=0.5, zorder=0)
+                    ax.axvline(edge, color='gray', linestyle=':', linewidth=1.0, alpha=0.5, zorder=0)
 
                 legendHandles = []
                 for iprim, prim in enumerate(selectedPrimaries):
 
-                    handle = plt.Line2D([], [], color=self.primaryColors[iprim], lw=4, alpha=0.45, label=prim)
+                    handle = plt.fill_between([], [], color=self.primaryColors[iprim], alpha=0.45, label=prim)
                     legendHandles.append(handle)
+
+                # Median legend entry
+                median_handle = plt.Line2D([], [], color='black', linestyle='-', linewidth=3,
+                                           label='Median')
+                legendHandles.append(median_handle)
 
                 # 90% quantile legend entry
                 q90handle = plt.Line2D([], [], color='black', linestyle=':', linewidth=3,
-                                       marker='*', markersize=10, label='90% Quantile')
-                
+                                       marker='*', markersize=10, markeredgecolor='black',
+                                       markerfacecolor='white', label='90% Quantile')
                 legendHandles.append(q90handle)
 
-                ax.legend(handles=legendHandles, loc='upper right', fontsize=12)
+                ax.legend(handles=legendHandles, loc=legend_loc, fontsize=18, ncols=2)
                 
-                fig.suptitle(self.params[ipar], fontsize=18)
+                # No need for this after using individual plots for each zenith bin, keep in case I want to swap back
+                #fig.suptitle(self.params[ipar], fontsize=18)
 
                 if protonHeliumOnly == True:
                     fileToSave = (filename + "_Violin_ProtonHeliumOnly_" + self.plotNames[ipar] + f"_Zenith_{zmin:.0f}_{zmax:.0f}.pdf")
