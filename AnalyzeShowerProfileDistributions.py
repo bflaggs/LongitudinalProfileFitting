@@ -125,7 +125,7 @@ filePrimNames = ""
 
 analysis = ProfileFitAnalysis(minDeg=minDeg, maxDeg=maxDeg, minLgE=minLgE, maxLgE=maxLgE,
                               includeXmax=True, includeRval=True, includeLval=True,
-                              includeSigmas=True, useGHFits=flagGHShiftedFits, useCorsikaXmax=False,
+                              includeSigmas=False, useGHFits=flagGHShiftedFits, useCorsikaXmax=False,
                               energyScaling=flagEnergyScale, energyProxyScaling=flagEnergyProxyScale, applyDataCuts=flagDataCut,
                               observatory=observatory, useLargerSmearValues=False, singleObservable=False,
                               smearVal=0.0, hadronicModel=modelName)
@@ -140,10 +140,10 @@ if args.useGHShiftedFits == True:
     filename = ABS_PATH_HERE + "/plots/violin/GHShiftedFit/" + modelDir + "/" + observatory + filePrimNames + fileDataCut
 else:
     filenameQuant = ABS_PATH_HERE + "/plots/quantiles/" + modelDir + "/" + observatory + filePrimNames + fileDataCut
-    filename = ABS_PATH_HERE + "/plots/violin/" + modelDir + "/" + observatory + filePrimNames + fileDataCut
+    filename = ABS_PATH_HERE + "/plots/violin/" + modelDir + "/AllPrimaries/" + observatory + filePrimNames + fileDataCut
 
     # Test making quantile and violin plots, only for the parameterized fits for now 
     #analysis.MakeQuantileEvolutionMaps(filenameQuant)
     #analysis.MakeViolinPlots(filename)
-    analysis.MakeViolinPlots(filename, protonHeliumOnly=True)
+    analysis.MakeViolinPlots(filename, protonHeliumOnly=False)
 
