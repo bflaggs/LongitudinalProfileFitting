@@ -90,6 +90,7 @@ class ProfileFitAnalysis(object):
 
         self.hadronicModel = hadronicModel
 
+        self.modelNameFile = hadronicModel.replace(" ", "")
 
         self.primaryNames = {"2212": "Proton", "1000020040": "Helium", "1000080160": "Oxygen", "1000260560": "Iron"}
         self.primaryColors = qualitative_colors(4)[::-1]
@@ -881,35 +882,33 @@ class ProfileFitAnalysis(object):
             yVals = np.array(list(ratiosDict.values())) * 100.0 # Convert to a percentage
 
             if includeBadFitValues == True:
-                totBadFits = (yVals / 100.0) * totEvents
-                ax.scatter(xVals, yVals, marker=markers[iprim], c=self.primaryColors[iprim], label=f'{prim}, Tot. Fits = {totEvents}, Bad Fits = {totBadFits}')
+                totBadFits = [int((y / 100.0) * totEvents) for y in yVals]
+                ax.scatter(xVals, yVals, marker=markers[iprim], c=self.primaryColors[iprim], label=f'{prim}: Tot. Fits = {totEvents:.0f}, Bad Fits = {totBadFits}')
             else:
-                ax.scatter(xVals, yVals, marker=markers[iprim], c=self.primaryColors[iprim], label=f'{prim}, Tot. Fits = {totEvents}')
+                ax.scatter(xVals, yVals, marker=markers[iprim], c=self.primaryColors[iprim], label=f'{prim}: Tot. Fits = {totEvents:.0f}')
 
             if iprim == 0:            
                 ax.set_xticks(xVals)
                 ax.set_xticklabels(xLabels, minor=False, rotation=45)
 
-        ax.legend(loc="best", prop={"size": 14})
+        ax.legend(loc="best", prop={"size": 12})
 
         ax.yaxis.set_minor_locator(MultipleLocator(0.50))
         ax.tick_params(direction="in", which="both", axis="both")
         ax.yaxis.set_ticks_position("both")
         ax.xaxis.set_ticks_position("both")
 
-        if self.observatoryName == "IceCube":
-            ax.text(0.40, 0.65, "IceCube", transform=ax.transAxes, fontsize=14)
-        elif self.observatoryName == "Auger":
-            ax.text(0.45, 0.65, "Auger", transform=ax.transAxes, fontsize=14)
-        ax.text(0.60, 0.65, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=14)
-        ax.text(0.60, 0.59, rf"lg(E) = {self.minLgE}$-${self.maxLgE}", transform=ax.transAxes, fontsize=14)
+        ax.text(0.80, 0.66, rf"E = 10$^{{{self.minLgE}}}-$10$^{{{self.maxLgE}}}$ eV", transform=ax.transAxes, fontsize=14, ha="center", va="center")
+        ax.text(0.80, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=14, ha="center", va="center")
+        ax.text(0.80, 0.55, self.hadronicModel, transform=ax.transAxes, fontsize=14, ha="center", va="center")
+        ax.text(0.80, 0.49, self.observatoryName, transform=ax.transAxes, fontsize=14, ha="center", va="center")
 
         ax.grid(axis='both', color='k', linestyle='-', alpha=0.3)
 
         if self.flagDataCuts == True:
-            fileToSave = path + f"/plots/misc/" + self.observatoryName + f"_FractionOfPoorFits_zen{self.minDeg}_{self.maxDeg}_lgE{self.minLgE}_{self.maxLgE}_DataCutApplied.pdf"
+            fileToSave = path + f"/plots/misc/" + self.observatoryName + "_" + self.modelNameFile + f"_FractionOfPoorFits_zen{self.minDeg}_{self.maxDeg}_lgE{self.minLgE}_{self.maxLgE}_DataCutApplied.pdf"
         else:
-            fileToSave = path + f"/plots/misc/" + self.observatoryName + f"_FractionOfPoorFits_zen{self.minDeg}_{self.maxDeg}_lgE{self.minLgE}_{self.maxLgE}.pdf"
+            fileToSave = path + f"/plots/misc/" + self.observatoryName + "_" + self.modelNameFile + f"_FractionOfPoorFits_zen{self.minDeg}_{self.maxDeg}_lgE{self.minLgE}_{self.maxLgE}.pdf"
         fig.savefig(fileToSave, bbox_inches="tight")
         print("Saved", fileToSave)
 
@@ -924,14 +923,16 @@ class ProfileFitAnalysis(object):
 
         totalEvents = 0
 
-        fitsUnconstrained = 0
-        fitsXmaxAbove1500 = 0
-        fitsXmaxBelow0 = 0
-        fitsRAbove1 = 0
         fitsLAbove350 = 0
+
+        fitsUnconstrained = 0
         fitsSigmaXmaxAbove5 = 0
         fitsSigmaRAbovePoint05 = 0
         fitsSigmaLAboveCut = 0
+        fitsXmaxAbove1500 = 0
+        fitsXmaxBelow0 = 0
+        fitsRAbove1 = 0
+        fitsRBelow0 = 0
 
         for event in self.eventList:
 
@@ -972,26 +973,13 @@ class ProfileFitAnalysis(object):
                 sigLString = 'sigmaL>5'
                 sigLCut = 5.0
 
-            if sigXmax == -999.0 or sigR == -999.0 or sigL == -999.0:
-                fitsUnconstrained += 1
-                continue
-
-            if XmaxValue > 1500.0:
-                fitsXmaxAbove1500 += 1
-                continue
-
-            if XmaxValue < 0.0:
-                fitsXmaxBelow0 += 1
-                continue
-
-            if RValue > 1.0:
-                fitsRAbove1 += 1
-                continue
-
             # Fits w/ L > 350 aren't bad fits but there are a few showers with such large widths it draws out the histogram distributions
             # Not sure yet what could cause such elongated showers... although they happen more likely for p and He (as expected)
             if LValue > 350.0:
                 fitsLAbove350 += 1
+
+            if sigXmax == -999.0 or sigR == -999.0 or sigL == -999.0:
+                fitsUnconstrained += 1
                 continue
 
             if sigXmax > 5.0:
@@ -1006,22 +994,38 @@ class ProfileFitAnalysis(object):
                 fitsSigmaLAboveCut += 1
                 continue
 
+            if XmaxValue > 1500.0:
+                fitsXmaxAbove1500 += 1
+                continue
+
+            if XmaxValue < 0.0:
+                fitsXmaxBelow0 += 1
+                continue
+
+            if RValue > 1.0:
+                fitsRAbove1 += 1
+                continue
+
+            if RValue < 0.0:
+                fitsRBelow0 += 1
+                continue
+
             prevZen = zen
             prevAzi = azi
 
 
         typesBadFitRatiosDict = dict([('Total Fits', float(totalEvents)),
                                   ('Unconstrained', float(fitsUnconstrained)),
+                                  ('sigmaXmax>5', float(fitsSigmaXmaxAbove5)),
+                                  ('sigmaR>.05', float(fitsSigmaRAbovePoint05)),
+                                  (sigLString, float(fitsSigmaLAboveCut)),
                                   ('Xmax>1500', float(fitsXmaxAbove1500)),
                                   ('Xmax<0', float(fitsXmaxBelow0)),
                                   ('R>1', float(fitsRAbove1)),
-                                  ('L>350', float(fitsLAbove350)),
-                                  ('sigmaXmax>5', float(fitsSigmaXmaxAbove5)),
-                                  ('sigmaR>.05', float(fitsSigmaRAbovePoint05)),
-                                  (sigLString, float(fitsSigmaLAboveCut))
+                                  ('R<0', float(fitsRBelow0))
                                  ])
 
-        return typesBadFitRatiosDict
+        return typesBadFitRatiosDict, fitsLAbove350
 
 
     def PlotTypesBadFits(self, path, fittype=None):
@@ -1039,7 +1043,7 @@ class ProfileFitAnalysis(object):
 
         for iprim, prim in enumerate(self.data.keys()):
 
-            ratiosDict = self.CountTypesBadFits(prim, fit=fittype)
+            ratiosDict, elongated_showers = self.CountTypesBadFits(prim, fit=fittype)
 
             xLabels = list(ratiosDict.keys())[1:]
             xVals = np.linspace(0, len(xLabels)-1, len(xLabels))
@@ -1048,7 +1052,7 @@ class ProfileFitAnalysis(object):
             totEvents = list(ratiosDict.values())[0]
             totBadFits = yVals.sum()
 
-            ax.plot(xVals, yVals, linestyle='solid', linewidth=2, marker='o', color=self.primaryColors[iprim], label=f'{prim}, Tot. Fits = {totEvents}, Bad Fits = {totBadFits}')
+            ax.plot(xVals, yVals, linestyle='solid', linewidth=2, marker='o', color=self.primaryColors[iprim], label=f'{prim}: Tot. = {totEvents:.0f}, Bad = {totBadFits:.0f}, L>350 = {elongated_showers:.0f}')
 
             if iprim == 0:            
                 ax.set_xticks(xVals)
@@ -1060,13 +1064,15 @@ class ProfileFitAnalysis(object):
         ax.yaxis.set_ticks_position("both")
         ax.xaxis.set_ticks_position("both")
 
-        ax.text(0.33, 0.71, rf"$\theta_{{\rm zen}} = {self.minDeg}^{{\circ}}-{self.maxDeg}^{{\circ}}$", transform=ax.transAxes, fontsize=14)
-        ax.text(0.33, 0.65, rf"lg(E) = {self.minLgE}$-${self.maxLgE}", transform=ax.transAxes, fontsize=14)
+        ax.text(0.60, 0.66, rf"E = 10$^{{{self.minLgE}}}-$10$^{{{self.maxLgE}}}$ eV", transform=ax.transAxes, fontsize=14, ha="center", va="center")
+        ax.text(0.60, 0.61, rf"$\theta_{{\rm zen}} = {self.minDeg:.0f}^{{\circ}}-{self.maxDeg:.0f}^{{\circ}}$", transform=ax.transAxes, fontsize=14, ha="center", va="center")
+        ax.text(0.60, 0.55, self.hadronicModel, transform=ax.transAxes, fontsize=14, ha="center", va="center")
+        ax.text(0.60, 0.49, self.observatoryName, transform=ax.transAxes, fontsize=14, ha="center", va="center")
 
         if self.flagDataCuts == True:
-            fileToSave = path + "/plots/misc/" + self.observatoryName + "_NumberBadFitTypes_" + fittype + f"_zen{self.minDeg}_{self.maxDeg}_lgE{self.minLgE}_{self.maxLgE}_DataCutApplied.pdf"
+            fileToSave = path + "/plots/misc/" + self.observatoryName + "_" + self.modelNameFile + "_NumberBadFitTypes_" + fittype + f"_zen{self.minDeg}_{self.maxDeg}_lgE{self.minLgE}_{self.maxLgE}_DataCutApplied.pdf"
         else:
-            fileToSave = path + "/plots/misc/" + self.observatoryName + "_NumberBadFitTypes_" + fittype + f"_zen{self.minDeg}_{self.maxDeg}_lgE{self.minLgE}_{self.maxLgE}.pdf"
+            fileToSave = path + "/plots/misc/" + self.observatoryName + "_" + self.modelNameFile + "_NumberBadFitTypes_" + fittype + f"_zen{self.minDeg}_{self.maxDeg}_lgE{self.minLgE}_{self.maxLgE}.pdf"
         fig.savefig(fileToSave, bbox_inches="tight")
         print("Saved", fileToSave)
 

@@ -52,6 +52,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("input", type=str, nargs="+", default=[], help="List of CORSIKA simulation ASCII files")
 parser.add_argument("--observatory", type=str, nargs="?", required=True, default="IceCube", help="Name of observatory (either IceCube or Auger)")
+parser.add_argument("--hadronicModel", type=str, nargs="?", required=True, default="EPOS LHC-R", help="Name of hadronic model (either EPOS LHC-R, QGSJET-III.01, or Sibyll 2.3e)")
 parser.add_argument("--zenithRange", type=float, nargs=2, default=[0.0, 71.6], help="Zenith range of data to plot")
 parser.add_argument("--energyRange", type=float, nargs=2, default=[16.0, 18.5], help="lg(E) energy range of data to plot")
 parser.add_argument("--compareFitTypes", action="store_true", help="If set, will make plots to compare number of poor fits to GH shifted and parameterized functions")
@@ -111,6 +112,19 @@ elif flagEnergyProxyScale == True:
 else:
     fileDataCut = fileDataCut
 
+modelName = str(args.hadronicModel)
+modelNameFile = modelName.replace(" ", "")
+
+# For saving the plots in their respective model directories (for next gen hadronic models)
+if modelName == "EPOS LHC-R":
+    modelDir = "EPOSLHCR"
+elif modelName == "QGSJETIII-01":
+    modelDir = "QGSJETIII01"
+elif modelName == "Sibyll 2.3e":
+    modelDir = "SIBYLL23e"
+else:
+    raise ValueError("Model name not recognized. Check spelling of modelName variable.")
+
 # Can add keywords used to investigate only certain primaries
 # I had them here but removed them because didn't think it was necessary at the moment as one can just read in the primaries they want
 filePrimNames = ""
@@ -119,7 +133,8 @@ analysis = ProfileFitAnalysis(minDeg=minDeg, maxDeg=maxDeg, minLgE=minLgE, maxLg
                               includeXmax=True, includeRval=True, includeLval=True,
                               includeSigmas=True, useGHFits=flagGHShiftedFits, useCorsikaXmax=False,
                               energyScaling=flagEnergyScale, energyProxyScaling=flagEnergyProxyScale, applyDataCuts=flagDataCut,
-                              observatory=observatory, useLargerSmearValues=False, singleObservable=False, smearVal=0.0)
+                              observatory=observatory, useLargerSmearValues=False, singleObservable=False,
+                              smearVal=0.0, hadronicModel=modelName)
 
 for file in args.input:
     analysis.ReadSingleFile(file)
